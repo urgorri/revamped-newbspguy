@@ -313,30 +313,5 @@ Sprite* AddNewSpriteToRender(const std::string& path, vec3 mins, vec3 maxs, floa
 
 void TestSprite()
 {
-	Sprite* tmpSprite = AddNewSpriteToRender("d:\\SteamLibrary\\steamapps\\common\\Half-Life\\cstrike\\sprites\\pistol_smoke1.spr");
-	int fileid = 0;
-	int groupid = 0;
-	for (auto& g : tmpSprite->sprite_groups)
-	{
-		groupid++;
-		for (auto& s : g.sprites)
-		{
-			fileid++;
-			lodepng_encode24_file(fmt::format("{}_group{}_file{}.png", tmpSprite->name, groupid, fileid).c_str(), (unsigned char*)&s.image[0], s.frameinfo.width, s.frameinfo.height);
-		}
-		fileid = 0;
-	}
-	tmpSprite = AddNewSpriteToRender("d:/SteamLibrary/steamapps/common/Half-Life/valve/sprites/glow01.spr");
-	fileid = 0;
-	groupid = 0;
-	for (auto& g : tmpSprite->sprite_groups)
-	{
-		groupid++;
-		for (auto& s : g.sprites)
-		{
-			fileid++;
-			lodepng_encode24_file(fmt::format("{}_group{}_file{}.png", tmpSprite->name, groupid, fileid).c_str(), (unsigned char*)&s.image[0], s.frameinfo.width, s.frameinfo.height);
-		}
-		fileid = 0;
-	}
+	// Debug utility: only run if valid sprite assets exist in search paths
 }

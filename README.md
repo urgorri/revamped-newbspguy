@@ -105,7 +105,7 @@ Usage: bspguy <command> <mapname> [options]
 
 <Commands>
   info      : Show BSP data summary
-  merge     : Merges two or more maps together
+  merge     : Merges two or more maps together (supports --verticalMerge / --verticalGap or -overlapgap)
   noclip    : Delete some clipnodes/nodes from the BSP
   simplify  : Simplify BSP models
   delete    : Delete BSP models
@@ -114,15 +114,17 @@ Usage: bspguy <command> <mapname> [options]
   exportobj : Export bsp geometry to obj [WIP]
   cullfaces : Remove leaf faces from map
   exportlit : Export .lit (Quake) lightdata file
-  importlit : Import .lit (Quake) lightdata file to map.
+  importlit : Import .lit (Quake) lightdata file to map
   exportrad : Export RAD.exe .ext & .wa_ files for hlrad.exe
   exportwad : Export all map textures to .wad file
   importwad : Import all .wad textures to map
+  modent    : Batch query, filter, update, or export map entities via CLI
+  screenshot: Capture high-resolution viewport render of a map
 
 Run 'bspguy <command> help' for command-specific options.
 ```
 
-> Note: The `merge` command supports `verticalMerge` and `verticalGap` options. Run the help for the exact syntax.
+> Note: The `merge` command supports both `--verticalMerge` / `--verticalGap <dist>` and legacy `-overlapgap <vector_list>` syntax. Run `bspguy merge help` for detailed options.
 
 ---
 
