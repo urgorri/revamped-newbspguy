@@ -4686,26 +4686,7 @@ void Gui::drawMenu_Windows()
 
 	if (ImGui::BeginMenu(get_localized_string(LANG_0601).c_str()))
 	{
-		if (ImGui::MenuItem("Map Limits & Statistics", "F2", &showLimitsWidget, map != nullptr))
-		{
-		}
-		IMGUI_TOOLTIP(g, "Open engine limits and lump usage analyzer window");
-
-		if (ImGui::MenuItem("Entity Report Table", "F3", &showEntityReport, map != nullptr))
-		{
-		}
-		IMGUI_TOOLTIP(g, "Open full searchable entity report table window");
-
-		if (ImGui::MenuItem("Texture Browser", "F4", &showTextureBrowser, map != nullptr))
-		{
-		}
-		IMGUI_TOOLTIP(g, "Browse embedded and WAD textures");
-
-		if (ImGui::MenuItem("Face Editor", "F6", &showFaceEditWidget, map != nullptr))
-		{
-		}
-		IMGUI_TOOLTIP(g, "Open texture alignment, scaling, and face manipulation panel");
-
+		ImGui::TextDisabled("Primary Panels:");
 		if (ImGui::MenuItem("Entity Keyvalues", "Alt+Enter", &showKeyvalueWidget, map != nullptr))
 		{
 		}
@@ -4716,12 +4697,33 @@ void Gui::drawMenu_Windows()
 		}
 		IMGUI_TOOLTIP(g, "Open 3D coordinate transform manipulator panel");
 
+		if (ImGui::MenuItem("Face Editor", "F6", &showFaceEditWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open texture alignment, scaling, and face manipulation panel");
+
+		if (ImGui::MenuItem("Texture Browser", "F4", &showTextureBrowser, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Browse embedded and WAD textures");
+
 		if (ImGui::MenuItem("Lightmap Editor", NULL, &showLightmapEditorWidget, map != nullptr))
 		{
 		}
 		IMGUI_TOOLTIP(g, "Open face lightmap luminance and RGB color editor panel");
 
 		ImGui::Separator();
+		ImGui::TextDisabled("Tools & Inspection:");
+
+		if (ImGui::MenuItem("Map Limits & Statistics", "F2", &showLimitsWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open engine limits and lump usage analyzer window");
+
+		if (ImGui::MenuItem("Entity Report Table", "F3", &showEntityReport, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open full searchable entity report table window");
 
 		if (ImGui::MenuItem("Map Merger", NULL, &showMergeMapWidget))
 		{
