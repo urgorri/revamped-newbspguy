@@ -1844,3 +1844,56 @@ void Gui::drawImportMapWidget()
 	}
 	ImGui::End();
 }
+
+void Gui::drawRadErrorModal()
+{
+	if (!showRadErrorModal)
+		return;
+
+	ImGui::OpenPopup("RAD Compilation Result");
+
+	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+	if (ImGui::BeginPopupModal("RAD Compilation Result", &showRadErrorModal, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.35f, 1.0f), "RAD Compilation Error");
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 32.0f);
+		ImGui::TextUnformatted(radErrorMessage.c_str());
+		ImGui::PopTextWrapPos();
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+
+		if (!radLogFilePath.empty() && fileExists(radLogFilePath))
+		{
+			if (ImGui::Button("Open Compiler Log", ImVec2(150, 0)))
+			{
+				if (ImGui::GetPlatformIO().Platform_OpenInShellFn != NULL)
+				{
+					ImGui::GetPlatformIO().Platform_OpenInShellFn(ImGui::GetCurrentContext(), radLogFilePath.c_str());
+				}
+			}
+			ImGui::SameLine();
+		}
+
+		if (ImGui::Button("Open Settings", ImVec2(120, 0)))
+		{
+			showSettingsWidget = true;
+			showRadErrorModal = false;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Close", ImVec2(100, 0)))
+		{
+			showRadErrorModal = false;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+}
+

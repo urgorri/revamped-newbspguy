@@ -381,6 +381,12 @@ void RegisterAllAppActions(Gui* gui, Renderer* app)
 						{ if (gui) gui->showShiftMapDialog = !gui->showShiftMapDialog; },
 						hasMap});
 
+	reg.registerAction({"map.recompile_lighting", "Recompile Lighting (HLRAD)", "Map", "",
+						"Execute external HLRAD compiler and hot reload lightmaps in viewport",
+						[gui]()
+						{ if (gui) gui->recompileLighting(); },
+						hasMap});
+
 	// ----------------------------------------------------
 	// WINDOWS
 	// ----------------------------------------------------
