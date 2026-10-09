@@ -117,6 +117,8 @@ class Gui
 
 	void invalidateTextureBrowserCache() { textureBrowserCacheInvalidated = true; }
 
+	void recompileLighting();
+
   private:
 	ImGuiIO* imgui_io = NULL;
 	int settingsTab = 0;
@@ -220,6 +222,11 @@ class Gui
 	void ExportFaceModel(Bsp* src_map, const std::string& export_path, const std::vector<int>& faceIdxs, int ExportType, bool movemodel);
 	void loadFonts();
 	void checkFaceErrors();
+
+	bool showRadErrorModal = false;
+	std::string radErrorMessage;
+	std::string radLogFilePath;
+	void drawRadErrorModal();
 };
 
 ImVec4 imguiColorFromConsole(unsigned int colors);

@@ -297,6 +297,7 @@ void Gui::draw()
 		{
 			drawModentDialog();
 		}
+		drawRadErrorModal();
 		if (showLimitsWidget)
 		{
 			drawLimits();

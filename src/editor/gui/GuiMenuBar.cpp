@@ -3410,93 +3410,11 @@ void Gui::drawMenu_Map()
 
 		bool hasAnyCollision = anyHullValid[1] || anyHullValid[2] || anyHullValid[3];
 
-		if (ImGui::MenuItem("Recompile lighting", NULL, false, g_settings.rad_path.size()))
+		if (ImGui::MenuItem("Recompile lighting", NULL, false, map && !map->is_mdl_model && !app->isLoading))
 		{
-			std::string path = g_settings.rad_path;
-			FindPathInAssets(map, g_settings.rad_path, path);
-			if (!fileExists(path))
-			{
-				print_log(PRINT_RED, "No hlrad.exe found!\n");
-			}
-			else
-			{
-				g_settings.save_cam = true;
-				map->save_cam_pos = cameraOrigin;
-				map->save_cam_angles = cameraAngles;
-
-				map->update_ent_lump();
-				map->update_lump_pointers();
-				map->validate();
-				map->write(map->bsp_path);
-
-				Process* tmpProc = new Process(g_settings.rad_path);
-				std::string args = g_settings.rad_options;
-				std::string bsp_path;
-				std::string old_bsp_path = map->bsp_path;
-				map->ExportExtFile(old_bsp_path, bsp_path);
-
-				size_t old_bsp_size = fileSize(bsp_path);
-				if (old_bsp_size > 0)
-				{
-					replaceAll(args, "{map_path}", bsp_path);
-					showConsoleWindow(true);
-
-					tmpProc->arg(args);
-					tmpProc->executeAndWait(0, 0, 0);
-
-					if (fileSize(bsp_path) == old_bsp_size)
-					{
-						print_log(PRINT_RED, "Failed rad compiler!!!\n");
-					}
-					else
-					{
-						// close current map render
-						int mapRenderId = map->getBspRenderId();
-						if (mapRenderId >= 0)
-						{
-							BspRenderer* mapRender = map->getBspRender();
-							if (mapRender)
-							{
-								map->setBspRender(NULL);
-								app->deselectObject();
-								app->clearSelection();
-								app->deselectMap();
-								mapRenderers.erase(mapRenderers.begin() + mapRenderId);
-								delete mapRender;
-								map = NULL;
-								app->selectMapId(0);
-							}
-						}
-						// remove old bsp
-						removeFile(old_bsp_path);
-
-						// copy new bsp
-						copyFile(bsp_path, old_bsp_path);
-						map = new Bsp(old_bsp_path);
-						app->addMap(map);
-
-						// remove temporary files
-						std::string delfileprefix = bsp_path.substr(0, bsp_path.size() - 4);
-						removeFile(bsp_path);
-						removeFile(delfileprefix + ".wa_");
-						removeFile(delfileprefix + ".ext");
-						removeFile(delfileprefix + ".log");
-						removeFile(delfileprefix + ".err");
-					}
-				}
-				else
-				{
-					print_log(PRINT_RED, "Error exporting old rad lighting!!\n");
-				}
-				delete tmpProc;
-			}
+			recompileLighting();
 		}
-		if (ImGui::IsItemHovered() && g.HoveredIdTimer > g_tooltip_delay)
-		{
-			ImGui::BeginTooltip();
-			ImGui::TextUnformatted("Recalculate lights using rad compiler. (From settings)");
-			ImGui::EndTooltip();
-		}
+		IMGUI_TOOLTIP(g, "Recalculate lightmaps using external HLRAD compiler with error handling and live reload");
 
 		if (ImGui::MenuItem("Generate nav mesh", NULL, false, (!rend->debugNavMesh || !g_app->debugLeafNavMesh)))
 		{
@@ -5151,3 +5069,163 @@ void Gui::drawMenu_Debug()
 		ImGui::EndMenu();
 	}
 }
+
+void Gui::recompileLighting()
+{
+	Bsp* map = app->getSelectedMap();
+	BspRenderer* rend = map ? map->getBspRender() : NULL;
+	if (!map || map->is_mdl_model || !rend)
+	{
+		return;
+	}
+
+	if (g_settings.rad_path.empty())
+	{
+		radErrorMessage = "No RAD compiler configured!\n\nPlease configure the RAD executable path in Settings (Paths tab).";
+		radLogFilePath = "";
+		showRadErrorModal = true;
+		print_log(PRINT_RED, "No hlrad executable configured in settings!\n");
+		return;
+	}
+
+	std::string resolved_rad_path = g_settings.rad_path;
+	FindPathInAssets(map, g_settings.rad_path, resolved_rad_path);
+	if (!fileExists(resolved_rad_path))
+	{
+		radErrorMessage = fmt::format("HLRAD executable not found at:\n{}\n\nPlease verify the path in Settings (Paths tab).", resolved_rad_path);
+		radLogFilePath = "";
+		showRadErrorModal = true;
+		print_log(PRINT_RED, "No hlrad executable found at: {}\n", resolved_rad_path);
+		return;
+	}
+
+	g_settings.save_cam = true;
+	map->save_cam_pos = cameraOrigin;
+	map->save_cam_angles = cameraAngles;
+
+	map->update_ent_lump();
+	map->update_lump_pointers();
+	map->validate();
+	map->write(map->bsp_path);
+
+	std::string args = g_settings.rad_options;
+	if (args.empty())
+	{
+		args = "\"{map_path}\"";
+	}
+	else if (args.find("{map_path}") == std::string::npos)
+	{
+		args += " \"{map_path}\"";
+	}
+
+	std::string bsp_path;
+	std::string old_bsp_path = map->bsp_path;
+	map->ExportExtFile(old_bsp_path, bsp_path);
+
+	size_t old_bsp_size = fileSize(bsp_path);
+	if (old_bsp_size == 0 || !fileExists(bsp_path))
+	{
+		radErrorMessage = "Failed to export intermediate sidecar files (.ext, .wa_, _nolight.bsp) for RAD compilation.";
+		radLogFilePath = "";
+		showRadErrorModal = true;
+		print_log(PRINT_RED, "Error exporting old rad lighting files!\n");
+		return;
+	}
+
+	std::string delfileprefix = bsp_path.substr(0, bsp_path.size() - 4);
+	std::string logFilePath = delfileprefix + ".log";
+	std::string errFilePath = delfileprefix + ".err";
+
+	replaceAll(args, "{map_path}", bsp_path);
+	showConsoleWindow(true);
+
+	print_log(PRINT_BLUE, "Running RAD compiler: {} {}\n", resolved_rad_path, args);
+
+	Process* tmpProc = new Process(resolved_rad_path);
+	tmpProc->arg(args);
+	int exitCode = tmpProc->executeAndWait(0, 0, 0);
+	delete tmpProc;
+
+	// Check if lighting lump was written and has non-zero length
+	bool validLighting = false;
+	size_t new_bsp_size = fileSize(bsp_path);
+	if (new_bsp_size > 0)
+	{
+		std::ifstream checkFile(bsp_path, std::ios::binary);
+		if (checkFile.is_open())
+		{
+			BSPHEADER checkHeader;
+			checkFile.read((char*)&checkHeader, sizeof(BSPHEADER));
+			if (checkFile.gcount() == sizeof(BSPHEADER))
+			{
+				if (checkHeader.nVersion == 30 && checkHeader.lump[LUMP_LIGHTING].nLength > 0)
+				{
+					validLighting = true;
+				}
+			}
+			checkFile.close();
+		}
+	}
+
+	if (exitCode != 0 || !validLighting || new_bsp_size == old_bsp_size)
+	{
+		print_log(PRINT_RED, "Failed rad compiler (exit code {})!\n", exitCode);
+		radErrorMessage = fmt::format(
+			"HLRAD compilation failed with exit code {}.\n\n"
+			"Executable:\n{}\n\n"
+			"Arguments:\n{}\n\n"
+			"Lighting data was {} generated.\n\n"
+			"Check the compiler log for detailed error output.",
+			exitCode, resolved_rad_path, args,
+			validLighting ? "partially" : "not"
+		);
+		radLogFilePath = fileExists(logFilePath) ? logFilePath : (fileExists(errFilePath) ? errFilePath : "");
+		showRadErrorModal = true;
+
+		// Clean up intermediate files, but keep .log and .err for diagnostics
+		removeFile(bsp_path);
+		removeFile(delfileprefix + ".wa_");
+		removeFile(delfileprefix + ".ext");
+		return;
+	}
+
+	// Succeeded: Hot reload map in editor
+	print_log(PRINT_GREEN, "HLRAD compilation successful! Reloading map lightmaps...\n");
+
+	vec3 savedOrigin = cameraOrigin;
+	vec3 savedAngles = cameraAngles;
+
+	int mapRenderId = map->getBspRenderId();
+	if (mapRenderId >= 0)
+	{
+		BspRenderer* mapRender = map->getBspRender();
+		if (mapRender)
+		{
+			map->setBspRender(NULL);
+			app->deselectObject();
+			app->clearSelection();
+			app->deselectMap();
+			mapRenderers.erase(mapRenderers.begin() + mapRenderId);
+			delete mapRender;
+			map = NULL;
+			app->selectMapId(0);
+		}
+	}
+
+	removeFile(old_bsp_path);
+	copyFile(bsp_path, old_bsp_path);
+
+	map = new Bsp(old_bsp_path);
+	app->addMap(map);
+
+	cameraOrigin = savedOrigin;
+	cameraAngles = savedAngles;
+
+	// Remove temporary files
+	removeFile(bsp_path);
+	removeFile(delfileprefix + ".wa_");
+	removeFile(delfileprefix + ".ext");
+	removeFile(delfileprefix + ".log");
+	removeFile(delfileprefix + ".err");
+}
+

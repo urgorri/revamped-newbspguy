@@ -2594,12 +2594,17 @@ bool checkCollision(const vec3& obj1Mins, const vec3& obj1Maxs, const vec3& obj2
 
 std::string Process::quoteIfNecessary(std::string toQuote)
 {
-	if (quoteArgs)
+	if (toQuote.empty())
+		return "\"\"";
+
+	if (toQuote.size() >= 2 && toQuote.front() == '\"' && toQuote.back() == '\"')
 	{
-		if (toQuote.find(' ') != std::string::npos)
-		{
-			toQuote = '\"' + toQuote + '\"';
-		}
+		return toQuote;
+	}
+
+	if (toQuote.find(' ') != std::string::npos || toQuote.find('\t') != std::string::npos)
+	{
+		toQuote = '\"' + toQuote + '\"';
 	}
 
 	return toQuote;
@@ -2623,7 +2628,7 @@ std::string Process::getCommandlineString()
 
 	for (std::vector<std::string>::iterator arg = _arguments.begin(); arg != _arguments.end(); ++arg)
 	{
-		cmdline << " " << quoteIfNecessary(*arg);
+		cmdline << " " << (quoteArgs ? quoteIfNecessary(*arg) : *arg);
 	}
 
 	return cmdline.str();
