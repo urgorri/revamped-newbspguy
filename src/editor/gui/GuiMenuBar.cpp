@@ -1071,6 +1071,12 @@ void Gui::drawMenu_File()
 
 		if (ImGui::BeginMenu(get_localized_string(LANG_0532).c_str(), !app->isLoading && map))
 		{
+			if (ImGui::MenuItem("Viewport Screenshot (.tga)", "F12"))
+			{
+				app->save_viewport_screenshot();
+			}
+			IMGUI_TOOLTIP(g, "Capture full-resolution viewport image and save to screenshots folder");
+
 			if (ImGui::MenuItem(get_localized_string(LANG_0533).c_str(), NULL, false, map && !map->is_mdl_model))
 			{
 				std::string entFilePath;
@@ -2225,6 +2231,13 @@ void Gui::drawMenu_File()
 
 		if (ImGui::BeginMenu(get_localized_string(LANG_0543).c_str(), !app->isLoading))
 		{
+			if (ImGui::MenuItem("Add Map to Scene / Renderer...", NULL, false, !app->isLoading))
+			{
+				showImportMapWidget_Type = SHOW_IMPORT_ADD_NEW;
+				showImportMapWidget = true;
+			}
+			IMGUI_TOOLTIP(g, "Load an additional BSP map into the renderer workspace without closing current maps");
+
 			if (ImGui::MenuItem(get_localized_string(LANG_0544).c_str(), NULL, false, map && !map->is_mdl_model))
 			{
 				showImportMapWidget_Type = SHOW_IMPORT_MODEL_BSP;
@@ -2399,23 +2412,11 @@ void Gui::drawMenu_File()
 			}
 		}
 
-		/*
-
-			if (ImGui::MenuItem("Merge", NULL, false, !app->isLoading)) {
-				char* fname = tinyfd_openFileDialog("Merge Map", "",
-					1, bspFilterPatterns, "GoldSrc Map Files (*.bsp)", 1);
-
-				if (fname)
-					g_app->merge(fname);
-			}
-			Bsp* map = g_app->mapRenderers[0]->map;
-			tooltip(g, ("Merge one other BSP into the current file.\n\n"
-				"Equivalent CLI command:\nbspguy merge " + map->name + " -noscript -noripent -maps \""
-				+ map->name + ",other_map\"\n\nUse the CLI for automatic arrangement and optimization of "
-				"many maps. The CLI also offers ripent fixes and script setup which can "
-				"generate a playable map without you having to make any manual edits (Sven Co-op only).").c_str());
-
-		*/
+		if (ImGui::MenuItem(get_localized_string(LANG_0825).c_str(), NULL, showMergeMapWidget, !app->isLoading))
+		{
+			showMergeMapWidget = !showMergeMapWidget;
+		}
+		IMGUI_TOOLTIP(g, "Open multi-map merger tool window to combine, stack, or align multiple BSP maps");
 		if (ImGui::BeginMenu("Recent Files", g_settings.lastOpened.size()))
 		{
 			for (auto& file : g_settings.lastOpened)
@@ -2838,6 +2839,12 @@ void Gui::drawMenu_View()
 		}
 		IMGUI_TOOLTIP(g, "Toggle 3D environment skybox cubemap background in the viewport");
 
+		if (ImGui::MenuItem("Take Viewport Screenshot", "F12"))
+		{
+			app->save_viewport_screenshot();
+		}
+		IMGUI_TOOLTIP(g, "Capture full-resolution viewport image and save to screenshots folder");
+
 		ImGui::EndMenu();
 	}
 }
@@ -2900,8 +2907,21 @@ void Gui::drawMenu_Map()
 		}
 		IMGUI_TOOLTIP(g, "Compact vertex tables, merge collinear edges, and sort marksurfaces");
 
+		if (ImGui::MenuItem(get_localized_string(LANG_0825).c_str(), NULL, showMergeMapWidget, !app->isLoading))
+		{
+			showMergeMapWidget = !showMergeMapWidget;
+		}
+		IMGUI_TOOLTIP(g, "Open multi-map merger tool window to combine, stack, or align multiple BSP maps");
+
 		if (ImGui::BeginMenu("MAP TRANSFORMATION [WIP]", map))
 		{
+			if (ImGui::MenuItem("Shift / Move Map (X, Y, Z)...", NULL, showShiftMapDialog, map && !map->is_mdl_model))
+			{
+				showShiftMapDialog = !showShiftMapDialog;
+			}
+			IMGUI_TOOLTIP(g, "Translate entire map geometry, models, and entities by specified delta offsets");
+			ImGui::Separator();
+
 			if (ImGui::MenuItem("Mirror map x/y", NULL, false, map))
 			{
 				for (int i = 0; i < map->vertCount; i++)
@@ -4452,6 +4472,19 @@ void Gui::drawMenu_Tools()
 			ImGui::EndMenu();
 		}
 
+		ImGui::Separator();
+		if (ImGui::MenuItem(get_localized_string(LANG_0825).c_str(), NULL, showMergeMapWidget, !app->isLoading))
+		{
+			showMergeMapWidget = !showMergeMapWidget;
+		}
+		IMGUI_TOOLTIP(g, "Open multi-map merger tool window to combine, stack, or align multiple BSP maps");
+
+		if (ImGui::MenuItem("Batch Entity Query (modent)...", NULL, showModentDialog, map && !map->is_mdl_model))
+		{
+			showModentDialog = !showModentDialog;
+		}
+		IMGUI_TOOLTIP(g, "Search, modify, or delete entities across active map using query expressions");
+
 		ImGui::EndMenu();
 	}
 }
@@ -4663,30 +4696,106 @@ void Gui::drawMenu_Windows()
 
 	if (ImGui::BeginMenu(get_localized_string(LANG_0601).c_str()))
 	{
+		if (ImGui::MenuItem("Map Limits & Statistics", "F2", &showLimitsWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open engine limits and lump usage analyzer window");
+
+		if (ImGui::MenuItem("Entity Report Table", "F3", &showEntityReport, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open full searchable entity report table window");
+
+		if (ImGui::MenuItem("Texture Browser", "F4", &showTextureBrowser, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Browse embedded and WAD textures");
+
+		if (ImGui::MenuItem("Face Editor", "F6", &showFaceEditWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open texture alignment, scaling, and face manipulation panel");
+
+		if (ImGui::MenuItem("Entity Keyvalues", "Alt+Enter", &showKeyvalueWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open Entity Keyvalue & SmartEdit inspector panel");
+
+		if (ImGui::MenuItem("3D Transform Tool", "Ctrl+M", &showTransformWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open 3D coordinate transform manipulator panel");
+
+		if (ImGui::MenuItem("Lightmap Editor", NULL, &showLightmapEditorWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open face lightmap luminance and RGB color editor panel");
+
+		ImGui::Separator();
+
+		if (ImGui::MenuItem("Map Merger", NULL, &showMergeMapWidget))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open multi-map merger tool window");
+
+		if (ImGui::MenuItem("Map Overview (2D Radar)", NULL, &showOverviewWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open 2D radar/overview map rendering controls");
+
+		if (ImGui::MenuItem("Go to Coordinates (GOTO)", "Ctrl+Shift+G", &showGOTOWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Teleport camera to specific coordinates or entity index");
+
+		if (ImGui::MenuItem("Batch Entity Query (modent)", NULL, &showModentDialog, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open headless query runner for batch entity operations");
+
+		if (ImGui::MenuItem("Log Console", "F5", &showLogWidget))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open bspguy diagnostic output log window");
+
+		if (ImGui::MenuItem("Debug PVS / Engine Inspector", NULL, &showDebugWidget, map != nullptr))
+		{
+		}
+		IMGUI_TOOLTIP(g, "Open low-level BSP engine debug and PVS inspection panel");
+
 #ifdef WIN32
-		if (ImGui::MenuItem("Console", NULL, &g_console_visible))
+		if (ImGui::MenuItem("Developer Console", NULL, &g_console_visible))
 		{
 			showConsoleWindow(g_console_visible);
 		}
 		IMGUI_TOOLTIP(g, "Toggle embedded developer output console window");
 #endif
-		Bsp* selectedMap = app->getSelectedMap();
-		for (BspRenderer* bspRend : mapRenderers)
+
+		if (mapRenderers.size() > 0)
 		{
-			if (bspRend->map && !bspRend->map->is_bsp_model)
+			ImGui::Separator();
+			ImGui::TextDisabled("Open Map Tabs:");
+			Bsp* selectedMap = app->getSelectedMap();
+			for (BspRenderer* bspRend : mapRenderers)
 			{
-				if (ImGui::MenuItem(bspRend->map->bsp_name.c_str(), NULL, selectedMap == bspRend->map))
+				if (bspRend->map && !bspRend->map->is_bsp_model)
 				{
-					selectedMap->getBspRender()->renderCameraAngles = cameraAngles;
-					selectedMap->getBspRender()->renderCameraOrigin = cameraOrigin;
-					app->deselectObject();
-					app->clearSelection();
-					app->selectMap(bspRend->map);
-					cameraAngles = bspRend->renderCameraAngles;
-					cameraOrigin = bspRend->renderCameraOrigin;
-					makeVectors(cameraAngles, app->cameraForward, app->cameraRight, app->cameraUp);
+					if (ImGui::MenuItem(bspRend->map->bsp_name.c_str(), NULL, selectedMap == bspRend->map))
+					{
+						if (selectedMap && selectedMap->getBspRender())
+						{
+							selectedMap->getBspRender()->renderCameraAngles = cameraAngles;
+							selectedMap->getBspRender()->renderCameraOrigin = cameraOrigin;
+						}
+						app->deselectObject();
+						app->clearSelection();
+						app->selectMap(bspRend->map);
+						cameraAngles = bspRend->renderCameraAngles;
+						cameraOrigin = bspRend->renderCameraOrigin;
+						makeVectors(cameraAngles, app->cameraForward, app->cameraRight, app->cameraUp);
+					}
+					IMGUI_TOOLTIP(g, "Switch active editor view to this map tab");
 				}
-				IMGUI_TOOLTIP(g, "Switch active editor view to this map tab");
 			}
 		}
 		ImGui::EndMenu();

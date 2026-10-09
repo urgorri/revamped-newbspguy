@@ -190,6 +190,8 @@ void Gui::init()
 	debugIconTexture->upload();
 	overviewIconTexture = loadIconHelper("./pictures/overview.png", "overviewIcon");
 	overviewIconTexture->upload();
+	mergeIconTexture = loadIconHelper("./pictures/merge.png", "mergeIcon", "./pictures/object.png");
+	mergeIconTexture->upload();
 
 	RegisterAllAppActions(this, app);
 }
@@ -286,6 +288,14 @@ void Gui::draw()
 		if (showMergeMapWidget)
 		{
 			drawMergeWindow();
+		}
+		if (showShiftMapDialog)
+		{
+			drawShiftMapDialog();
+		}
+		if (showModentDialog)
+		{
+			drawModentDialog();
 		}
 		if (showLimitsWidget)
 		{
@@ -1571,6 +1581,9 @@ void Gui::drawPanelsToolbar()
 
 		// 8. Map Overview
 		drawPanelButton("##btn_overview", overviewIconTexture, showOverviewWidget, 0, "Map Overview", "Toggle 2D radar/overview map rendering controls");
+
+		// 9. Map Merger
+		drawPanelButton("##btn_merge", mergeIconTexture, showMergeMapWidget, LANG_0825, "Map Merger", "Toggle multi-map merger tool window");
 	}
 	ImGui::End();
 }

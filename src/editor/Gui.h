@@ -91,6 +91,9 @@ class Gui
 	int showImportMapWidget_Type = 0;
 	bool showImportMapWidget = false;
 	bool showMergeMapWidget = false;
+	bool showShiftMapDialog = false;
+	vec3 shiftMapDelta = vec3(0.0f, 0.0f, 0.0f);
+	bool showModentDialog = false;
 	bool showLimitsWidget = true;
 	bool showFaceEditWidget = false;
 	bool showLightmapEditorWidget = false;
@@ -139,6 +142,7 @@ class Gui
 	Texture* logIconTexture = nullptr;
 	Texture* debugIconTexture = nullptr;
 	Texture* overviewIconTexture = nullptr;
+	Texture* mergeIconTexture = nullptr;
 
 	bool badSurfaceExtents = false;
 	bool lightmapTooLarge = false;
@@ -200,6 +204,8 @@ class Gui
 	void drawAbout();
 	void drawImportMapWidget();
 	void drawMergeWindow();
+	void drawShiftMapDialog();
+	void drawModentDialog();
 	void drawLimits();
 	void drawLightMapTool();
 	void drawFaceEditorWidget();

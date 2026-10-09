@@ -17,6 +17,7 @@
 #include "lodepng.h"
 #include "fmt/format.h"
 #include "MutexManager.h"
+#include "cli/EntityQuery.h"
 #include <filesystem>
 #include <algorithm>
 #include <cmath>
@@ -1295,6 +1296,64 @@ void Gui::drawMergeWindow()
 			ifd::FileDialog::Instance().Close();
 		}
 
+		if (ImGui::Button("Add Open Maps"))
+		{
+			for (size_t k = 0; k < mapRenderers.size(); k++)
+			{
+				if (mapRenderers[k] && mapRenderers[k]->map && !mapRenderers[k]->map->is_bsp_model)
+				{
+					std::string path = mapRenderers[k]->map->bsp_path;
+					if (path.size())
+					{
+						bool exists = false;
+						for (auto& existing : inPaths)
+						{
+							if (existing == path)
+							{
+								exists = true;
+								break;
+							}
+						}
+						if (!exists)
+						{
+							if (inPaths.size() == 1 && inPaths[0].empty())
+							{
+								inPaths[0] = path;
+							}
+							else
+							{
+								inPaths.push_back(path);
+								inOffsets.push_back(vec3());
+							}
+						}
+					}
+				}
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Add Row"))
+		{
+			inPaths.push_back("");
+			inOffsets.push_back(vec3());
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Stack Vertically (512 Z)"))
+		{
+			for (size_t k = 0; k < inOffsets.size(); k++)
+			{
+				inOffsets[k] = vec3(0.0f, 0.0f, 512.0f * (float)k);
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear All"))
+		{
+			inPaths.clear();
+			inPaths.push_back("");
+			inOffsets.clear();
+			inOffsets.push_back(vec3());
+		}
+		ImGui::Spacing();
+
 		for (size_t i = 0; i < inPaths.size(); i++)
 		{
 			std::string& s = inPaths[i];
@@ -1316,6 +1375,17 @@ void Gui::drawMergeWindow()
 			ImGui::SetNextItemWidth(250);
 			ImGui::InputFloat3(fmt::format("##offset{}", i).c_str(), &inOffsets[i].x);
 
+			if (inPaths.size() > 1)
+			{
+				ImGui::SameLine();
+				if (ImGui::Button(fmt::format("X##delrow{}", i).c_str()))
+				{
+					inPaths.erase(inPaths.begin() + i);
+					inOffsets.erase(inOffsets.begin() + i);
+					break;
+				}
+			}
+
 			if (s.length() > 1 && i + 1 == inPaths.size())
 			{
 				addNew = true;
@@ -1335,6 +1405,11 @@ void Gui::drawMergeWindow()
 		ImGui::PushStyleColor(ImGuiCol_Button, COLOR_NIGHTMARE_PURPLE);
 		bool clicked_23 = ImGui::Button(get_localized_string(LANG_1122).c_str(), ImVec2(120, 0));
 		ImGui::PopStyleColor(1);
+		ImGui::SameLine();
+		if (ImGui::Button("Close", ImVec2(100, 0)))
+		{
+			showMergeMapWidget = false;
+		}
 		if (clicked_23)
 		{
 			std::vector<Bsp*> maps;
@@ -1445,6 +1520,212 @@ void Gui::drawMergeWindow()
 		inPaths.emplace_back(std::string(""));
 		inOffsets.emplace_back(vec3());
 	}
+}
+
+void Gui::drawShiftMapDialog()
+{
+	ImGui::SetNextWindowSize(ImVec2(480.f, 230.f), ImGuiCond_FirstUseEver);
+	Bsp* map = app->getSelectedMap();
+	BspRenderer* rend = map ? map->getBspRender() : NULL;
+
+	if (ImGui::Begin("Shift / Move Map (X, Y, Z)###SHIFT_MAP_DIALOG", &showShiftMapDialog))
+	{
+		if (!map || map->is_mdl_model)
+		{
+			ImGui::TextDisabled("No active BSP map loaded.");
+		}
+		else
+		{
+			ImGui::Text("Translate all map geometry and entities by delta offset:");
+			ImGui::Spacing();
+			ImGui::SetNextItemWidth(350);
+			ImGui::InputFloat3("Offset (X, Y, Z)", &shiftMapDelta.x);
+
+			ImGui::Spacing();
+			if (ImGui::Button("+512 Z (Stack Above)"))
+			{
+				shiftMapDelta.z += 512.0f;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("-512 Z (Stack Below)"))
+			{
+				shiftMapDelta.z -= 512.0f;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Reset to Zero"))
+			{
+				shiftMapDelta = vec3(0.0f, 0.0f, 0.0f);
+			}
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Spacing();
+
+			ImGui::PushStyleColor(ImGuiCol_Button, COLOR_NIGHTMARE_PURPLE);
+			if (ImGui::Button("Apply Shift", ImVec2(120, 0)))
+			{
+				if (!shiftMapDelta.IsZero())
+				{
+					if (rend)
+					{
+						rend->pushUndoState("Shift Map", EDIT_MODEL_LUMPS | FL_ENTITIES);
+					}
+					map->move(shiftMapDelta);
+					app->reloading = true;
+					if (rend)
+					{
+						rend->reload();
+					}
+					app->reloading = false;
+					print_log("Shifted map '{}' by ({}, {}, {})\n", map->bsp_name, shiftMapDelta.x, shiftMapDelta.y, shiftMapDelta.z);
+					showShiftMapDialog = false;
+				}
+			}
+			ImGui::PopStyleColor(1);
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(100, 0)))
+			{
+				showShiftMapDialog = false;
+			}
+		}
+	}
+	ImGui::End();
+}
+
+void Gui::drawModentDialog()
+{
+	ImGui::SetNextWindowSize(ImVec2(620.f, 350.f), ImGuiCond_FirstUseEver);
+	Bsp* map = app->getSelectedMap();
+	BspRenderer* rend = map ? map->getBspRender() : NULL;
+
+	if (ImGui::Begin("Batch Entity Query (modent)###MODENT_DIALOG", &showModentDialog))
+	{
+		if (!map || map->is_mdl_model)
+		{
+			ImGui::TextDisabled("No active BSP map loaded.");
+		}
+		else
+		{
+			static std::string queryString = "classname=monster_*";
+			static int actionType = 0; // 0: Delete, 1: Set Keyvalues, 2: Remove Key
+			static std::string actionArg = "";
+
+			ImGui::Text("Batch headless query engine for entities in active map:");
+			ImGui::Spacing();
+
+			ImGui::SetNextItemWidth(500);
+			ImGui::InputTextWithHint("Query", "e.g. classname=monster_* AND targetname=", &queryString);
+			ImGui::TextDisabled("Query syntax: =, !=, AND, OR, wildcards (*)");
+
+			ImGui::Spacing();
+			ImGui::SetNextItemWidth(250);
+			const char* actionNames[] = {"Delete matched entities", "Set / Add keyvalues", "Remove key"};
+			ImGui::Combo("Action", &actionType, actionNames, 3);
+
+			if (actionType == 1)
+			{
+				ImGui::SetNextItemWidth(500);
+				ImGui::InputTextWithHint("Keyvalues", "e.g. targetname=monstruo, wait=5", &actionArg);
+			}
+			else if (actionType == 2)
+			{
+				ImGui::SetNextItemWidth(300);
+				ImGui::InputTextWithHint("Key Name", "e.g. targetname", &actionArg);
+			}
+
+			ImGui::Spacing();
+			EntityQuery query(queryString);
+			int matchCount = 0;
+			if (query.isValid())
+			{
+				for (size_t i = 1; i < map->ents.size(); i++)
+				{
+					if (query.evaluate(map->ents[i]))
+						matchCount++;
+				}
+				ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "%d entities match this query.", matchCount);
+			}
+			else
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "Invalid query syntax.");
+			}
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Spacing();
+
+			ImGui::PushStyleColor(ImGuiCol_Button, COLOR_NIGHTMARE_PURPLE);
+			bool canExecute = query.isValid() && matchCount > 0;
+			if (ImGui::Button("Execute Batch Action", ImVec2(160, 0)) && canExecute)
+			{
+				if (rend)
+				{
+					rend->pushEntityUndoStateDelay("Batch Entity Mod (modent)");
+				}
+
+				int modifiedCount = 0;
+				if (actionType == 0) // Delete
+				{
+					for (int i = (int)map->ents.size() - 1; i >= 1; i--)
+					{
+						if (query.evaluate(map->ents[i]))
+						{
+							delete map->ents[i];
+							map->ents.erase(map->ents.begin() + i);
+							modifiedCount++;
+						}
+					}
+				}
+				else if (actionType == 1) // Set keyvalues
+				{
+					std::vector<std::string> kvs = splitString(actionArg, ",");
+					for (size_t i = 1; i < map->ents.size(); i++)
+					{
+						if (query.evaluate(map->ents[i]))
+						{
+							for (auto& kv : kvs)
+							{
+								std::vector<std::string> parts = splitString(kv, "=");
+								if (parts.size() == 2)
+								{
+									map->ents[i]->setOrAddKeyvalue(trimSpaces(parts[0]), trimSpaces(parts[1]));
+								}
+							}
+							modifiedCount++;
+						}
+					}
+				}
+				else if (actionType == 2) // Remove key
+				{
+					std::string keyToRemove = trimSpaces(actionArg);
+					for (size_t i = 1; i < map->ents.size(); i++)
+					{
+						if (query.evaluate(map->ents[i]))
+						{
+							map->ents[i]->removeKeyvalue(keyToRemove);
+							modifiedCount++;
+						}
+					}
+				}
+
+				map->update_ent_lump();
+				if (rend)
+				{
+					rend->preRenderEnts();
+				}
+				g_app->updateEnts();
+				print_log("Batch entity query executed: {} entities modified.\n", modifiedCount);
+				showModentDialog = false;
+			}
+			ImGui::PopStyleColor(1);
+			ImGui::SameLine();
+			if (ImGui::Button("Close", ImVec2(100, 0)))
+			{
+				showModentDialog = false;
+			}
+		}
+	}
+	ImGui::End();
 }
 
 void Gui::drawImportMapWidget()
