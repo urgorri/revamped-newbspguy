@@ -186,7 +186,6 @@ class Gui
 	void drawMenu_Help();
 	void drawMenu_Debug();
 	void drawToolbar();
-	void drawPanelsToolbar();
 	void drawFpsOverlay();
 	void drawStatusMessage();
 	void drawStatusBar();

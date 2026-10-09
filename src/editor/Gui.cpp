@@ -216,7 +216,6 @@ void Gui::draw()
 
 	drawFpsOverlay();
 	drawToolbar();
-	drawPanelsToolbar();
 	drawStatusMessage();
 	drawStatusBar();
 
@@ -1503,88 +1502,6 @@ void Gui::drawToolbar()
 			ImGui::TextUnformatted(get_localized_string("FACE_LEAF_MODE").c_str());
 			ImGui::EndTooltip();
 		}
-	}
-	ImGui::End();
-}
-
-void Gui::drawPanelsToolbar()
-{
-	ImGuiStyle& style = ImGui::GetStyle();
-	float iconWidth = (fontSize / 22.0f) * 32.0f;
-	float modeToolbarHeight = iconWidth + style.FramePadding.y * 2.0f + style.WindowPadding.y * 2.0f;
-	ImVec2 window_pos = ImVec2(10.0f, 35.0f + modeToolbarHeight + 6.0f);
-
-	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
-	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-	if (ImGui::Begin("##PanelsToolbar", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
-	{
-		style.FrameBorderSize = 1.0f;
-		ImGuiContext& g = *GImGui;
-		ImVec4 dimColor = style.Colors[ImGuiCol_FrameBg];
-		ImVec4 selectColor = style.Colors[ImGuiCol_FrameBgActive];
-		ImVec2 iconSize = ImVec2(iconWidth, iconWidth);
-		ImVec2 iconSize_big = ImVec2(iconWidth * 2.0f, iconWidth * 2.0f);
-
-		selectColor.x *= selectColor.w;
-		selectColor.y *= selectColor.w;
-		selectColor.z *= selectColor.w;
-		selectColor.w = 1.0f;
-
-		dimColor.x *= dimColor.w;
-		dimColor.y *= dimColor.w;
-		dimColor.z *= dimColor.w;
-		dimColor.w = 1.0f;
-
-		auto drawPanelButton = [&](const char* id, Texture* iconTex, bool& stateFlag, int langId, const char* fallbackLabel, const char* tooltipDesc)
-		{
-			Texture* tex = iconTex ? iconTex : objectIconTexture;
-			ImGui::PushStyleColor(ImGuiCol_Button, stateFlag ? selectColor : dimColor);
-			ImGui::PushStyleColor(ImGuiCol_Border, stateFlag ? dimColor : selectColor);
-			if (ImGui::ImageButton(id, (ImTextureID)(size_t)tex->id, iconSize, ImVec2(0, 0), ImVec2(1, 1)))
-			{
-				stateFlag = !stateFlag;
-			}
-			ImGui::PopStyleColor(2);
-			if (ImGui::IsItemHovered() && g.HoveredIdTimer > g_tooltip_delay)
-			{
-				ImGui::BeginTooltip();
-				ImGui::ImageButton(fmt::format("{}_big", id).c_str(), (ImTextureID)(size_t)tex->id, iconSize_big, ImVec2(0, 0), ImVec2(1, 1));
-				std::string title = (langId > 0) ? get_localized_string(langId) : fallbackLabel;
-				ImGui::TextUnformatted(title.c_str());
-				if (tooltipDesc && strlen(tooltipDesc) > 0)
-				{
-					ImGui::TextDisabled("%s", tooltipDesc);
-				}
-				ImGui::EndTooltip();
-			}
-		};
-
-		// 1. Entity Keyvalues & SmartEdit
-		drawPanelButton("##btn_keyvalues", keyvaluesIconTexture, showKeyvalueWidget, LANG_0596, "Keyvalues", "Toggle Entity Keyvalue & SmartEdit inspector panel (Alt+Enter)");
-
-		// 2. 3D Transform Tool
-		drawPanelButton("##btn_transform", transformIconTexture, showTransformWidget, LANG_1160, "Transform Tool", "Toggle 3D coordinate transform manipulator panel (Ctrl+M)");
-
-		// 3. Face Editor
-		drawPanelButton("##btn_face_editor", faceEditorIconTexture, showFaceEditWidget, LANG_0597, "Face Editor", "Toggle Face texture alignment, shift offsets, and scale panel (F6)");
-
-		// 4. Texture Browser
-		drawPanelButton("##btn_texture_browser", textureBrowserIconTexture, showTextureBrowser, LANG_0598, "Texture Browser", "Toggle visual texture browser for embedded and WAD assets (F4)");
-
-		// 5. Lightmap Editor
-		drawPanelButton("##btn_lightmap", lightmapIconTexture, showLightmapEditorWidget, LANG_0599, "Lightmap Editor", "Toggle face lightmap luminance and RGB color editor panel");
-
-		// 6. Log Console
-		drawPanelButton("##btn_log", logIconTexture, showLogWidget, LANG_0594, "Log Console", "Toggle bspguy diagnostic output log window (F5)");
-
-		// 7. Debug / PVS Inspection
-		drawPanelButton("##btn_debug", debugIconTexture, showDebugWidget, LANG_0595, "Debug PVS", "Toggle low-level BSP engine debug and PVS inspection panel");
-
-		// 8. Map Overview
-		drawPanelButton("##btn_overview", overviewIconTexture, showOverviewWidget, 0, "Map Overview", "Toggle 2D radar/overview map rendering controls");
-
-		// 9. Map Merger
-		drawPanelButton("##btn_merge", mergeIconTexture, showMergeMapWidget, LANG_0825, "Map Merger", "Toggle multi-map merger tool window");
 	}
 	ImGui::End();
 }
