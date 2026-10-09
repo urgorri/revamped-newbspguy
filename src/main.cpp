@@ -183,6 +183,26 @@ int merge_maps()
 	{
 		overlapGaps = g_cmdLine.getOptionVectorList("-overlapgap");
 	}
+	else if (g_cmdLine.hasOption("--verticalgap") || g_cmdLine.hasOption("-verticalgap") || g_cmdLine.hasOption("verticalgap"))
+	{
+		std::string vgapOpt = g_cmdLine.hasOption("--verticalgap") ? "--verticalgap" :
+		                      (g_cmdLine.hasOption("-verticalgap") ? "-verticalgap" : "verticalgap");
+		std::string valStr = g_cmdLine.getOption(vgapOpt);
+		float gapVal = str_to_float(valStr);
+		if (gapVal == 0.0f && valStr != "0")
+			gapVal = 512.0f;
+		for (size_t i = 0; i < maps.size(); i++)
+		{
+			overlapGaps.push_back(vec3(0, 0, gapVal) * (float)i);
+		}
+	}
+	else if (g_cmdLine.hasOption("--verticalmerge") || g_cmdLine.hasOption("-verticalmerge") || g_cmdLine.hasOption("verticalmerge"))
+	{
+		for (size_t i = 0; i < maps.size(); i++)
+		{
+			overlapGaps.push_back(vec3(0, 0, 512.0f) * (float)i);
+		}
+	}
 	else
 	{
 		// Default behavior or single vector compatibility
