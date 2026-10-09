@@ -2548,7 +2548,7 @@ void Gui::drawMenu_Edit()
 			}
 			IMGUI_TOOLTIP(g, "Paste entity while duplicating and attaching its underlying BSP model data");
 
-			if (ImGui::MenuItem("Paste at Selected Entity Origin", 0, false, app->hasCopiedEnt() && app->pickInfo.selectedEnts.size() > 0))
+			if (ImGui::MenuItem("Paste at Selected Entity Origin", 0, false, map && app->hasCopiedEnt() && app->pickInfo.selectedEnts.size() > 0))
 			{
 				vec3 pivot = vec3();
 				for (int i : app->pickInfo.selectedEnts)
@@ -4119,7 +4119,7 @@ void Gui::drawMenu_Tools()
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Additional tools"))
+		if (ImGui::BeginMenu("Additional tools", map && !map->is_mdl_model && rend))
 		{
 			if (ImGui::BeginMenu("Delete OOB Data", !app->isLoading && app->getSelectedMap() && rend))
 			{
@@ -4256,7 +4256,7 @@ void Gui::drawMenu_Tools()
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::MenuItem("Make map overlay"))
+			if (ImGui::MenuItem("Make map overlay", NULL, false, map && !map->is_mdl_model && rend))
 			{
 				for (int m = map->modelCount - 1; m >= 1; m--)
 				{
@@ -4368,10 +4368,10 @@ void Gui::drawMenu_Tools()
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Experimental / WIP Tools"))
+		if (ImGui::BeginMenu("Experimental / WIP Tools", map && !map->is_mdl_model && rend))
 		{
 			if (ImGui::BeginMenu("MDL to BSP (WIP)", app->pickInfo.selectedEnts.size() == 1 &&
-														 rend->renderEnts[app->pickInfo.selectedEnts[0]].mdl))
+														 rend && rend->renderEnts[app->pickInfo.selectedEnts[0]].mdl))
 			{
 				if (ImGui::MenuItem("Bruteforce clipnodes", NULL, generateClipnodes == 1))
 				{
@@ -4423,7 +4423,7 @@ void Gui::drawMenu_Tools()
 				ImGui::EndTooltip();
 			}
 
-			if (ImGui::MenuItem("PROTECT MAP!(WIP)", NULL, false, !map->is_protected && rend))
+			if (ImGui::MenuItem("PROTECT MAP!(WIP)", NULL, false, map && !map->is_protected && rend))
 			{
 				map->merge_all_verts(1.f);
 
@@ -4830,7 +4830,7 @@ void Gui::drawMenu_Debug()
 	Bsp* map = app->getSelectedMap();
 	BspRenderer* rend = map ? map->getBspRender() : NULL;
 
-	if (ImGui::BeginMenu(get_localized_string(LANG_0605).c_str()))
+	if (ImGui::BeginMenu(get_localized_string(LANG_0605).c_str(), map && !map->is_mdl_model))
 	{
 		if (ImGui::MenuItem("Print textures"))
 		{
