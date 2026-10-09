@@ -63,6 +63,19 @@ void RegisterAllAppActions(Gui* gui, Renderer* app)
 						},
 						hasMap});
 
+	reg.registerAction({"file.import_add_map", "Add Map to Scene / Renderer...", "File", "",
+						"Load an additional BSP map into the renderer workspace",
+						[gui]()
+						{
+							if (gui)
+							{
+								gui->showImportMapWidget_Type = SHOW_IMPORT_ADD_NEW;
+								gui->showImportMapWidget = true;
+							}
+						},
+						[]()
+						{ return true; }});
+
 	reg.registerAction({"file.screenshot_overview", "Render Map Overview Screenshot...", "File", "",
 						"Open overview screenshot renderer tool",
 						[gui]()
@@ -288,6 +301,13 @@ void RegisterAllAppActions(Gui* gui, Renderer* app)
 						[]()
 						{ return true; }});
 
+	reg.registerAction({"view.screenshot", "Take Viewport Screenshot", "View", "F12",
+						"Capture full-resolution viewport image and save to screenshots directory",
+						[app]()
+						{ if (app) app->save_viewport_screenshot(); },
+						[]()
+						{ return true; }});
+
 	// ----------------------------------------------------
 	// TOOLS & REPAIRS
 	// ----------------------------------------------------
@@ -342,6 +362,25 @@ void RegisterAllAppActions(Gui* gui, Renderer* app)
 						},
 						hasMap});
 
+	reg.registerAction({"tools.modent_query", "Batch Entity Query (modent)...", "Tools", "",
+						"Search, modify, or delete entities across active map using query expressions",
+						[gui]()
+						{ if (gui) gui->showModentDialog = !gui->showModentDialog; },
+						hasMap});
+
+	reg.registerAction({"map.merge_maps", "Merge Maps...", "Map", "",
+						"Combine, stack, or align multiple BSP maps into a single file",
+						[gui]()
+						{ if (gui) gui->showMergeMapWidget = !gui->showMergeMapWidget; },
+						[]()
+						{ return true; }});
+
+	reg.registerAction({"map.transform_move", "Shift / Move Map (X, Y, Z)...", "Map", "",
+						"Translate all map geometry and entities by delta offset",
+						[gui]()
+						{ if (gui) gui->showShiftMapDialog = !gui->showShiftMapDialog; },
+						hasMap});
+
 	// ----------------------------------------------------
 	// WINDOWS
 	// ----------------------------------------------------
@@ -363,6 +402,43 @@ void RegisterAllAppActions(Gui* gui, Renderer* app)
 						{ if (gui) gui->showTextureBrowser = !gui->showTextureBrowser; },
 						hasMap});
 
+	reg.registerAction({"window.face_editor", "Face Editor Widget", "Windows", "F6",
+						"Open texture alignment, scaling, and face manipulation panel",
+						[gui]()
+						{ if (gui) gui->showFaceEditWidget = !gui->showFaceEditWidget; },
+						hasMap});
+
+	reg.registerAction({"window.keyvalues", "Entity Keyvalues (SmartEdit)", "Windows", "Alt+Enter",
+						"Open Entity Keyvalue & SmartEdit inspector panel",
+						[gui]()
+						{ if (gui) gui->showKeyvalueWidget = !gui->showKeyvalueWidget; },
+						hasMap});
+
+	reg.registerAction({"window.transform", "3D Transform Tool", "Windows", "Ctrl+M",
+						"Open 3D coordinate transform manipulator panel",
+						[gui]()
+						{ if (gui) gui->showTransformWidget = !gui->showTransformWidget; },
+						hasMap});
+
+	reg.registerAction({"window.lightmap_editor", "Lightmap Editor", "Windows", "",
+						"Open face lightmap luminance and RGB color editor panel",
+						[gui]()
+						{ if (gui) gui->showLightmapEditorWidget = !gui->showLightmapEditorWidget; },
+						hasMap});
+
+	reg.registerAction({"window.overview", "Map Overview (2D Radar)", "Windows", "",
+						"Open 2D radar/overview map rendering controls",
+						[gui]()
+						{ if (gui) gui->showOverviewWidget = !gui->showOverviewWidget; },
+						hasMap});
+
+	reg.registerAction({"window.merge_maps", "Map Merger", "Windows", "",
+						"Open multi-map merger tool window",
+						[gui]()
+						{ if (gui) gui->showMergeMapWidget = !gui->showMergeMapWidget; },
+						[]()
+						{ return true; }});
+
 	reg.registerAction({"window.log", "Log & Console Output", "Windows", "F5",
 						"Open bspguy output log console",
 						[gui]()
@@ -376,10 +452,10 @@ void RegisterAllAppActions(Gui* gui, Renderer* app)
 						{ if (gui) gui->showGOTOWidget = !gui->showGOTOWidget; },
 						hasMap});
 
-	reg.registerAction({"window.face_editor", "Face Editor Widget", "Windows", "F6",
-						"Open texture alignment, scaling, and face manipulation panel",
+	reg.registerAction({"window.debug", "Debug PVS / Engine Inspector", "Windows", "",
+						"Open low-level BSP engine debug and PVS inspection panel",
 						[gui]()
-						{ if (gui) gui->showFaceEditWidget = !gui->showFaceEditWidget; },
+						{ if (gui) gui->showDebugWidget = !gui->showDebugWidget; },
 						hasMap});
 
 	reg.registerAction({"help.shortcuts", "Help & Keybindings", "Help", "F1",

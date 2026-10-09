@@ -70,6 +70,7 @@ extern bool ortho_save_png_full;
 extern int make_screenshot;
 extern int make_screenshot_target;
 extern std::string make_screenshot_dir;
+extern bool request_viewport_screenshot;
 
 extern vec2 mousePos;
 extern vec3 cameraOrigin;
@@ -157,6 +158,7 @@ class Renderer
 
 	void reloadBspModels();
 	void renderLoop();
+	void save_viewport_screenshot();
 	void postLoadFgdsAndTextures();
 	void postLoadFgds();
 	void reloadMaps();

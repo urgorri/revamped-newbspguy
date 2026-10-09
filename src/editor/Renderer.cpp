@@ -100,6 +100,7 @@ bool ortho_save_png_full = false;
 int make_screenshot = 0;
 int make_screenshot_target = 0;
 std::string make_screenshot_dir{};
+bool request_viewport_screenshot = false;
 
 vec2 mousePos;
 vec3 cameraOrigin;
@@ -636,7 +637,7 @@ void Renderer::renderLoop()
 
 			GLuint fbo = NULL, texture, rbo;
 
-			if (ortho_save_tga || ortho_save_bmp || ortho_save_png_full || (make_screenshot && !isLoading))
+			if (ortho_save_tga || ortho_save_bmp || ortho_save_png_full || (make_screenshot && !isLoading) || request_viewport_screenshot)
 			{
 				int captureW = ortho_tga_w;
 				int captureH = ortho_tga_h;
@@ -867,7 +868,7 @@ void Renderer::renderLoop()
 			}
 
 			// Disable smoothing during overview capture to prevent wireframe artifacts
-			if (ortho_save_tga || ortho_save_bmp || ortho_save_png_full || (make_screenshot && !isLoading))
+			if (ortho_save_tga || ortho_save_bmp || ortho_save_png_full || (make_screenshot && !isLoading) || request_viewport_screenshot)
 			{
 				glDisable(GL_LINE_SMOOTH);
 				glDisable(GL_POLYGON_SMOOTH);
@@ -1491,12 +1492,12 @@ void Renderer::renderLoop()
 			glDepthMask(GL_TRUE);
 			glDepthFunc(GL_LESS);
 
-			if (fbo && (ortho_save_tga || ortho_save_bmp || ortho_save_png_full || (make_screenshot && !isLoading)))
+			if (fbo && (ortho_save_tga || ortho_save_bmp || ortho_save_png_full || (make_screenshot && !isLoading) || request_viewport_screenshot))
 			{
 				int captureW = ortho_tga_w;
 				int captureH = ortho_tga_h;
 
-				if (ortho_save_png_full)
+				if (ortho_save_png_full || request_viewport_screenshot)
 				{
 					captureW = windowWidth;
 					captureH = windowHeight;
@@ -1514,7 +1515,19 @@ void Renderer::renderLoop()
 									 pixels.begin() + 3 * captureW * (captureH - line - 1));
 				}
 
-				if (ortho_save_tga || ortho_save_png_full || (make_screenshot && !isLoading))
+				if (request_viewport_screenshot)
+				{
+					std::string screenPath = g_working_dir + "screenshots/";
+					createDir(screenPath);
+					static int interactive_shot_count = 0;
+					screenPath += SelectedMap ? SelectedMap->bsp_name : "screenshot";
+					screenPath += "_shot_" + std::to_string(++interactive_shot_count) + ".tga";
+
+					stbi_write_tga(screenPath.c_str(), captureW, captureH, 3, pixels.data());
+					print_log("Screenshot saved to {}!\n", screenPath);
+					request_viewport_screenshot = false;
+				}
+				else if (ortho_save_tga || ortho_save_png_full || (make_screenshot && !isLoading))
 				{
 					if (make_screenshot)
 					{
@@ -5744,4 +5757,9 @@ void Renderer::selectBoxFaces()
 			}
 		}
 	}
+}
+
+void Renderer::save_viewport_screenshot()
+{
+	request_viewport_screenshot = true;
 }
