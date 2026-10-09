@@ -3671,6 +3671,78 @@ void Gui::drawMenu_Tools()
 
 			ImGui::Separator();
 
+			if (ImGui::MenuItem("Create Solid Entity in Box (func_wall)", 0, false, !app->isLoading && app->getSelectedMap() && rend && g_app->hasCullbox))
+			{
+				vec3 mins = g_app->cullMins - rend->mapOffset;
+				vec3 maxs = g_app->cullMaxs - rend->mapOffset;
+				vec3 origin = (mins + maxs) * 0.5f;
+				vec3 localMins = mins - origin;
+				vec3 localMaxs = maxs - origin;
+
+				Entity* newEnt = new Entity();
+				newEnt->addKeyvalue("origin", origin.toKeyvalueString());
+				newEnt->addKeyvalue("classname", "func_wall");
+
+				int aaatriggerIdx = map->GetTriggerTexture();
+				unsigned int dupLumps = FL_MARKSURFACES | FL_EDGES | FL_FACES | FL_NODES | FL_PLANES | FL_CLIPNODES | FL_SURFEDGES | FL_TEXINFO | FL_VERTICES | FL_LIGHTING | FL_MODELS | FL_LEAVES | FL_ENTITIES;
+				if (aaatriggerIdx == -1)
+				{
+					dupLumps |= FL_TEXTURES;
+					aaatriggerIdx = map->AddTriggerTexture();
+				}
+
+				int modelIdx = map->create_solid(localMins, localMaxs, aaatriggerIdx, false);
+
+				map->resize_all_lightmaps();
+				rend->loadLightmaps();
+				rend->refreshModel(modelIdx);
+				rend->refreshModelClipnodes(modelIdx);
+				rend->pushUndoState("Create Solid Entity in Box", dupLumps);
+				app->updateEnts();
+				print_log(PRINT_GREEN, "Created solid entity (func_wall, model *{}) in cull box\n", modelIdx);
+			}
+			IMGUI_TOOLTIP(g, "Create a solid brush model entity (func_wall) with collision covering the cull box");
+
+			if (ImGui::MenuItem("Create Monsterclip Entity in Box", 0, false, !app->isLoading && app->getSelectedMap() && rend && g_app->hasCullbox))
+			{
+				vec3 mins = g_app->cullMins - rend->mapOffset;
+				vec3 maxs = g_app->cullMaxs - rend->mapOffset;
+				vec3 origin = (mins + maxs) * 0.5f;
+				vec3 localMins = mins - origin;
+				vec3 localMaxs = maxs - origin;
+
+				Entity* newEnt = new Entity();
+				newEnt->addKeyvalue("origin", origin.toKeyvalueString());
+				newEnt->addKeyvalue("classname", "func_monsterclip");
+
+				int aaatriggerIdx = map->GetTriggerTexture();
+				unsigned int dupLumps = FL_MARKSURFACES | FL_EDGES | FL_FACES | FL_NODES | FL_PLANES | FL_CLIPNODES | FL_SURFEDGES | FL_TEXINFO | FL_VERTICES | FL_LIGHTING | FL_MODELS | FL_LEAVES | FL_ENTITIES;
+				if (aaatriggerIdx == -1)
+				{
+					dupLumps |= FL_TEXTURES;
+					aaatriggerIdx = map->AddTriggerTexture();
+				}
+
+				int modelIdx = map->create_solid(localMins, localMaxs, aaatriggerIdx, false);
+				newEnt->addKeyvalue("model", "*" + std::to_string(modelIdx));
+
+				BSPMODEL& model = map->models[modelIdx];
+				model.iFirstFace = 0;
+				model.nFaces = 0;
+				map->remove_unused_model_structures(CLEAN_FACES | CLEAN_MARKSURFACES);
+				map->ents.push_back(newEnt);
+
+				map->resize_all_lightmaps();
+				rend->refreshModel(modelIdx);
+				rend->refreshModelClipnodes(modelIdx);
+				rend->pushUndoState("Create Monsterclip Entity in Box", dupLumps);
+				app->updateEnts();
+				print_log(PRINT_GREEN, "Created monsterclip entity (func_monsterclip, model *{}) in cull box\n", modelIdx);
+			}
+			IMGUI_TOOLTIP(g, "Create an invisible monsterclip barrier solid brush entity covering the cull box");
+
+			ImGui::Separator();
+
 			if (ImGui::BeginMenu(get_localized_string(LANG_1192).c_str(), !app->isLoading && app->getSelectedMap() && rend && g_app->hasCullbox))
 			{
 				for (int i = 0; i < MAX_MAP_HULLS; i++)
