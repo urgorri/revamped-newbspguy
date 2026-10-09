@@ -361,6 +361,11 @@ class Bsp
 	bool regenerate_clipnodes(int modelIdx, int hullIdx);
 	int regenerate_clipnodes_from_nodes(int iNode, int hullIdx, bool& success);
 
+	// Universal collision generation for any BSP submodel (convex, concave, multi-faceted)
+	bool regenerate_model_clipnodes_universal(int modelIdx, int hullIdx);
+	int convert_nodes_to_clipnodes_recursive(int iNode, int hullIdx, bool& success);
+	bool generate_clipnodes_from_model_faces(int modelIdx, int hullIdx);
+
 	int create_node(bool force_reversed = false, int reversed_id = 0);
 	int create_clipnode(bool force_reversed = false, int reversed_id = 0);
 	int create_plane();

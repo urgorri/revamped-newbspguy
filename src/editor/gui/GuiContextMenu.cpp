@@ -678,11 +678,13 @@ void Gui::drawBspContexMenu()
 				{
 					if (modelIdx > 0 || map->is_bsp_model)
 					{
-						if (ImGui::BeginMenu(get_localized_string(LANG_0457).c_str(), !app->invalidSolid && app->isTransformableSolid))
+						if (ImGui::BeginMenu(get_localized_string(LANG_0457).c_str(), !app->isLoading && (modelIdx > 0 || map->is_bsp_model)))
 						{
 							if (ImGui::MenuItem(get_localized_string(LANG_0458).c_str()))
 							{
-								map->regenerate_clipnodes(modelIdx, -1);
+								rend->pushUndoState("Regenerate Clipnodes", EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
+								map->regenerate_model_clipnodes_universal(modelIdx, -1);
+								rend->refreshModelClipnodes(modelIdx);
 								checkValidHulls();
 								print_log(get_localized_string(LANG_0328), modelIdx);
 							}
@@ -693,7 +695,9 @@ void Gui::drawBspContexMenu()
 							{
 								if (ImGui::MenuItem(("Hull " + std::to_string(i)).c_str()))
 								{
-									map->regenerate_clipnodes(modelIdx, i);
+									rend->pushUndoState("Regenerate Hull " + std::to_string(i), EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
+									map->regenerate_model_clipnodes_universal(modelIdx, i);
+									rend->refreshModelClipnodes(modelIdx);
 									checkValidHulls();
 									print_log(get_localized_string(LANG_0329), i, modelIdx);
 								}
@@ -705,6 +709,7 @@ void Gui::drawBspContexMenu()
 						{
 							if (ImGui::MenuItem(get_localized_string(LANG_0460).c_str()))
 							{
+								rend->pushUndoState("Delete All Hulls", EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
 								map->delete_hull(0, modelIdx, -1);
 								map->delete_hull(1, modelIdx, -1);
 								map->delete_hull(2, modelIdx, -1);
@@ -715,6 +720,7 @@ void Gui::drawBspContexMenu()
 							}
 							if (ImGui::MenuItem(get_localized_string(LANG_1069).c_str()))
 							{
+								rend->pushUndoState("Delete Clipnodes", EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
 								map->delete_hull(1, modelIdx, -1);
 								map->delete_hull(2, modelIdx, -1);
 								map->delete_hull(3, modelIdx, -1);
@@ -731,6 +737,7 @@ void Gui::drawBspContexMenu()
 
 								if (ImGui::MenuItem(("Hull " + std::to_string(i)).c_str(), 0, false, isHullValid))
 								{
+									rend->pushUndoState("Delete Hull " + std::to_string(i), EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
 									map->delete_hull(i, modelIdx, -1);
 									checkValidHulls();
 									if (i == 0)
@@ -748,10 +755,12 @@ void Gui::drawBspContexMenu()
 						{
 							if (ImGui::MenuItem(get_localized_string(LANG_1152).c_str()))
 							{
+								rend->pushUndoState("Simplify All Hulls", EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
 								map->simplify_model_collision(modelIdx, 1);
 								map->simplify_model_collision(modelIdx, 2);
 								map->simplify_model_collision(modelIdx, 3);
 								rend->refreshModelClipnodes(modelIdx);
+								checkValidHulls();
 								print_log(get_localized_string(LANG_0333), modelIdx);
 							}
 
@@ -759,12 +768,12 @@ void Gui::drawBspContexMenu()
 
 							for (int i = 1; i < MAX_MAP_HULLS; i++)
 							{
-								bool isHullValid = map->models[modelIdx].iHeadnodes[i] >= 0;
-
-								if (ImGui::MenuItem(("Hull " + std::to_string(i)).c_str(), 0, false, isHullValid))
+								if (ImGui::MenuItem(("Hull " + std::to_string(i)).c_str(), 0, false, !app->isLoading))
 								{
-									map->simplify_model_collision(modelIdx, 1);
+									rend->pushUndoState("Simplify Hull " + std::to_string(i), EDIT_MODEL_LUMPS | FL_CLIPNODES | FL_PLANES | FL_MODELS);
+									map->simplify_model_collision(modelIdx, i);
 									rend->refreshModelClipnodes(modelIdx);
+									checkValidHulls();
 									print_log(get_localized_string(LANG_0334), i, modelIdx);
 								}
 							}

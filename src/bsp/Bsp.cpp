@@ -3944,6 +3944,9 @@ void Bsp::delete_hull_in_box(int hullIdx, vec3 clipMins, vec3 clipMaxs, int redi
 	if (hullIdx < 0 || hullIdx >= MAX_MAP_HULLS)
 		return;
 
+	print_log(PRINT_BLUE, "[Cull] Processing hull {} (redirect: {}) in box ({:.1f}, {:.1f}, {:.1f}) to ({:.1f}, {:.1f}, {:.1f})\n",
+		hullIdx, redirect, clipMins.x, clipMins.y, clipMins.z, clipMaxs.x, clipMaxs.y, clipMaxs.z);
+
 	if (hullIdx == 0)
 	{
 		int realRedirect = redirect;
@@ -9805,30 +9808,24 @@ void Bsp::simplify_model_collision(int modelIdx, int hullIdx)
 	}
 
 	BSPMODEL& model = models[modelIdx];
+	vec3 vertMin, vertMax;
+	get_model_vertex_bounds(modelIdx, vertMin, vertMax);
 
-	if (model.iHeadnodes[1] < 0 && model.iHeadnodes[2] < 0 && model.iHeadnodes[3] < 0)
+	if (vertMin.x >= vertMax.x || vertMin.y >= vertMax.y || vertMin.z >= vertMax.z)
 	{
-		print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_0171));
-		return;
+		vertMin = model.nMins;
+		vertMax = model.nMaxs;
 	}
 
-	if (hullIdx > 0 && model.iHeadnodes[hullIdx] < 0)
+	int startHull = (hullIdx <= 0) ? 1 : hullIdx;
+	int endHull = (hullIdx <= 0) ? MAX_MAP_HULLS - 1 : hullIdx;
+
+	for (int h = startHull; h <= endHull; h++)
 	{
-		print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_0172), hullIdx);
-		return;
+		create_clipnode_box(vertMin, vertMax, &model, h, false, false);
 	}
 
-	if (model.iHeadnodes[0] < 0)
-	{
-		print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_0173));
-		// TODO: create verts from plane intersections
-		return;
-	}
-
-	vec3 vertMin(g_limits.fltMaxCoord, g_limits.fltMaxCoord, g_limits.fltMaxCoord);
-	vec3 vertMax(-g_limits.fltMaxCoord, -g_limits.fltMaxCoord, -g_limits.fltMaxCoord);
-
-	create_clipnode_box(vertMin, vertMax, &model, hullIdx, true);
+	remove_unused_model_structures(CLEAN_CLIPNODES | CLEAN_PLANES);
 }
 
 int Bsp::create_clipnode(bool force_reversed, int reversed_id)
@@ -11527,6 +11524,200 @@ bool Bsp::regenerate_clipnodes(int modelIdx, int hullIdx)
 
 	remove_unused_model_structures(CLEAN_CLIPNODES | CLEAN_PLANES);
 	return retval;
+}
+
+int Bsp::convert_nodes_to_clipnodes_recursive(int iNode, int hullIdx, bool& success)
+{
+	if (iNode < 0)
+	{
+		int leafIdx = ~iNode;
+		if (leafIdx >= 0 && leafIdx < leafCount)
+		{
+			int contents = leaves[leafIdx].nContents;
+			return (contents == CONTENTS_SOLID || contents <= CONTENTS_SOLID) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+		}
+		return (iNode == CONTENTS_SOLID) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+	}
+
+	if (iNode >= nodeCount)
+	{
+		success = false;
+		return CONTENTS_EMPTY;
+	}
+
+	BSPNODE32& node = nodes[iNode];
+	if (node.iPlane < 0 || node.iPlane >= planeCount)
+	{
+		success = false;
+		return CONTENTS_EMPTY;
+	}
+
+	BSPPLANE origPlane = planes[node.iPlane];
+	vec3 hullExtent = default_hull_extents[hullIdx];
+	vec3 absNormal = vec3(std::abs(origPlane.vNormal.x), std::abs(origPlane.vNormal.y), std::abs(origPlane.vNormal.z));
+	float offset = dotProduct(absNormal, hullExtent);
+
+	BSPPLANE expandedPlane = origPlane;
+	expandedPlane.fDist += offset;
+
+	int newPlaneIdx = create_plane();
+	planes[newPlaneIdx] = expandedPlane;
+
+	int newClipIdx = create_clipnode();
+	clipnodes[newClipIdx].iPlane = newPlaneIdx;
+
+	for (int k = 0; k < 2; k++)
+	{
+		int childResult = convert_nodes_to_clipnodes_recursive(node.iChildren[k], hullIdx, success);
+		clipnodes[newClipIdx].iChildren[k] = childResult;
+	}
+
+	if (clipnodes[newClipIdx].iChildren[0] < 0 && clipnodes[newClipIdx].iChildren[0] == clipnodes[newClipIdx].iChildren[1])
+	{
+		return clipnodes[newClipIdx].iChildren[0];
+	}
+
+	return newClipIdx;
+}
+
+bool Bsp::generate_clipnodes_from_model_faces(int modelIdx, int hullIdx)
+{
+	if (modelIdx <= 0 || modelIdx >= modelCount)
+		return false;
+
+	BSPMODEL& model = models[modelIdx];
+	if (model.nFaces <= 0)
+		return false;
+
+	vec3 hullExtent = default_hull_extents[hullIdx];
+
+	int boxHeadNode = create_clipnode_box(model.nMins, model.nMaxs, &model, hullIdx, false, false);
+
+	std::vector<BSPPLANE> uniquePlanes;
+	std::vector<int> planeSides;
+
+	for (int i = 0; i < model.nFaces; i++)
+	{
+		BSPFACE32& face = faces[model.iFirstFace + i];
+		if (face.iPlane < 0 || face.iPlane >= planeCount)
+			continue;
+
+		BSPPLANE p = planes[face.iPlane];
+		int side = face.nPlaneSide;
+
+		vec3 absNormal = vec3(std::abs(p.vNormal.x), std::abs(p.vNormal.y), std::abs(p.vNormal.z));
+		float offset = dotProduct(absNormal, hullExtent);
+		if (side == 0)
+			p.fDist += offset;
+		else
+			p.fDist -= offset;
+
+		bool duplicate = false;
+		for (size_t k = 0; k < uniquePlanes.size(); k++)
+		{
+			if (dotProduct(uniquePlanes[k].vNormal, p.vNormal) > 0.999f &&
+				std::abs(uniquePlanes[k].fDist - p.fDist) < 0.1f &&
+				planeSides[k] == side)
+			{
+				duplicate = true;
+				break;
+			}
+		}
+
+		if (!duplicate)
+		{
+			uniquePlanes.push_back(p);
+			planeSides.push_back(side);
+		}
+	}
+
+	if (uniquePlanes.empty())
+		return false;
+
+	std::vector<BSPCLIPNODE32> addNodes;
+	int ladderHead = clipnodeCount;
+
+	for (size_t i = 0; i < uniquePlanes.size(); i++)
+	{
+		BSPCLIPNODE32 clipnode;
+		int newPlaneIdx = create_plane();
+		planes[newPlaneIdx] = uniquePlanes[i];
+		clipnode.iPlane = newPlaneIdx;
+
+		int side = planeSides[i];
+		if (i == uniquePlanes.size() - 1)
+		{
+			clipnode.iChildren[1 - side] = CONTENTS_SOLID;
+		}
+		else
+		{
+			clipnode.iChildren[1 - side] = ladderHead + (int)i + 1;
+		}
+		clipnode.iChildren[side] = CONTENTS_EMPTY;
+		addNodes.push_back(clipnode);
+	}
+
+	append_lump(LUMP_CLIPNODES, addNodes.data(), addNodes.size() * sizeof(BSPCLIPNODE32));
+	update_lump_pointers();
+
+	clipnodes[boxHeadNode + 5].iChildren[1] = ladderHead;
+	return true;
+}
+
+bool Bsp::regenerate_model_clipnodes_universal(int modelIdx, int hullIdx)
+{
+	if (modelIdx <= 0 || modelIdx >= modelCount)
+		return false;
+
+	BSPMODEL& model = models[modelIdx];
+	int startHull = (hullIdx <= 0) ? 1 : hullIdx;
+	int endHull = (hullIdx <= 0) ? MAX_MAP_HULLS - 1 : hullIdx;
+
+	bool anySuccess = false;
+
+	for (int h = startHull; h <= endHull; h++)
+	{
+		bool hullSuccess = false;
+
+		// Strategy 1: Visual Tree Conversion (Highest accuracy)
+		if (model.iHeadnodes[0] >= 0)
+		{
+			int solidNodeIdx = create_clipnode_box(model.nMins, model.nMaxs, &model, h, false, false);
+			bool convSuccess = true;
+			int convertedHead = convert_nodes_to_clipnodes_recursive(model.iHeadnodes[0], h, convSuccess);
+
+			if (convSuccess && convertedHead >= 0)
+			{
+				for (int k = 0; k < 2; k++)
+				{
+					if (clipnodes[solidNodeIdx].iChildren[k] == CONTENTS_SOLID)
+					{
+						clipnodes[solidNodeIdx].iChildren[k] = convertedHead;
+					}
+				}
+				hullSuccess = true;
+			}
+		}
+
+		// Strategy 2: Face Ladder Fallback
+		if (!hullSuccess && model.nFaces > 0)
+		{
+			hullSuccess = generate_clipnodes_from_model_faces(modelIdx, h);
+		}
+
+		// Strategy 3: Bounding Box Fallback
+		if (!hullSuccess)
+		{
+			simplify_model_collision(modelIdx, h);
+			hullSuccess = true;
+		}
+
+		if (hullSuccess)
+			anySuccess = true;
+	}
+
+	remove_unused_model_structures(CLEAN_CLIPNODES | CLEAN_PLANES);
+	return anySuccess;
 }
 
 void Bsp::write_csg_outputs(const std::string& path)
