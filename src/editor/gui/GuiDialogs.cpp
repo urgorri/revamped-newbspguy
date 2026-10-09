@@ -1873,9 +1873,10 @@ void Gui::drawRadErrorModal()
 		{
 			if (ImGui::Button("Open Compiler Log", ImVec2(150, 0)))
 			{
-#ifdef WIN32
-				ShellExecuteA(NULL, "open", radLogFilePath.c_str(), NULL, NULL, SW_SHOW);
-#endif
+				if (ImGui::GetPlatformIO().Platform_OpenInShellFn != NULL)
+				{
+					ImGui::GetPlatformIO().Platform_OpenInShellFn(ImGui::GetCurrentContext(), radLogFilePath.c_str());
+				}
 			}
 			ImGui::SameLine();
 		}
