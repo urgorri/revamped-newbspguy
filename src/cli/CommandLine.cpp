@@ -27,7 +27,15 @@ CommandLine::CommandLine(int argc, char* argv[])
 #ifdef WIN32
 			int nArgs;
 			LPWSTR* szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
-			bspfile = std::filesystem::path(szArglist[i]).string();
+			if (szArglist)
+			{
+				bspfile = std::filesystem::path(szArglist[i]).string();
+				LocalFree(szArglist);
+			}
+			else
+			{
+				bspfile = std::filesystem::path(argv[i]).string();
+			}
 #else
 			bspfile = std::filesystem::path(argv[i]).string();
 #endif
@@ -37,7 +45,7 @@ CommandLine::CommandLine(int argc, char* argv[])
 			options.push_back(arg);
 		}
 
-		if ((i == 1 || i == 2) && starts_with(larg, "help") || starts_with(larg, "/?") || starts_with(larg, "--help") || starts_with(larg, "-help") || starts_with(larg, "/help"))
+		if ((i == 1 || i == 2) && (starts_with(larg, "help") || starts_with(larg, "/?") || starts_with(larg, "--help") || starts_with(larg, "-help") || starts_with(larg, "/help")))
 		{
 			askingForHelp = true;
 		}
@@ -67,7 +75,15 @@ CommandLine::CommandLine(int argc, char* argv[])
 #ifdef WIN32
 		int nArgs;
 		LPWSTR* szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
-		bspfile = std::filesystem::path(szArglist[1]).string();
+		if (szArglist)
+		{
+			bspfile = std::filesystem::path(szArglist[1]).string();
+			LocalFree(szArglist);
+		}
+		else
+		{
+			bspfile = std::filesystem::path(argv[1]).string();
+		}
 #else
 		bspfile = std::filesystem::path(argv[1]).string();
 #endif

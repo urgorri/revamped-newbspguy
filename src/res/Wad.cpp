@@ -49,7 +49,7 @@ bool Wad::readInfo()
 
 	wadFile.read((char*)&header, sizeof(WADHEADER));
 
-	if (std::string(header.szMagic).find("WAD3") != 0)
+	if (strncmp(header.szMagic, "WAD3", 4) != 0)
 	{
 		print_log(get_localized_string(LANG_0249), filename);
 		wadFile.close();
@@ -246,8 +246,7 @@ WADTEX Wad::readTextureFromMemory(int dirIndex)
 	}
 
 	int offset = entry.nFilePos;
-
-	if (offset + sizeof(BSPMIPTEX) > (int)fileData.size())
+	if (offset < 0 || offset + (int)sizeof(BSPMIPTEX) > (int)fileData.size())
 		return {};
 
 	BSPMIPTEX mtex = BSPMIPTEX();

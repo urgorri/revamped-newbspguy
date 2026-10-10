@@ -171,17 +171,22 @@ void Winding::RemoveColinearPoints(float epsilon)
 
 bool Winding::Clip(BSPPLANE& split, bool keepon, float epsilon)
 {
-	float dists[MAX_POINTS_ON_WINDING]{};
-	int sides[MAX_POINTS_ON_WINDING]{};
-	int counts[3]{};
+	size_t numPoints = m_Points.size();
+	if (numPoints < 3)
+	{
+		m_Points.clear();
+		return false;
+	}
+
+	std::vector<float> dists(numPoints + 1);
+	std::vector<int> sides(numPoints + 1);
+	int counts[3] = {0, 0, 0};
 	float dot;
 	size_t i, j;
 
-	counts[0] = counts[1] = counts[2] = 0;
-
 	// determine sides for each point
 	// do this exactly, with no epsilon so tiny portals still work
-	for (i = 0; i < m_Points.size(); i++)
+	for (i = 0; i < numPoints; i++)
 	{
 		dot = DotProduct(m_Points[i], split.vNormal);
 		dot -= split.fDist;
@@ -219,24 +224,30 @@ bool Winding::Clip(BSPPLANE& split, bool keepon, float epsilon)
 		return true;
 	}
 
-	size_t maxpts = m_Points.size() + 4; // can't use counts[0]+2 because of fp grouping errors
+	size_t maxpts = numPoints + 4; // can't use counts[0]+2 because of fp grouping errors
 	unsigned newNumPoints = 0;
-	std::vector<vec3> newPoints = std::vector<vec3>(maxpts);
+	std::vector<vec3> newPoints(maxpts);
 
-	for (i = 0; i < m_Points.size(); i++)
+	for (i = 0; i < numPoints; i++)
 	{
 		vec3 p1 = m_Points[i];
 
 		if (sides[i] == SIDE_ON)
 		{
-			VectorCopy(p1, newPoints[newNumPoints]);
-			newNumPoints++;
+			if (newNumPoints < maxpts)
+			{
+				VectorCopy(p1, newPoints[newNumPoints]);
+				newNumPoints++;
+			}
 			continue;
 		}
 		else if (sides[i] == SIDE_FRONT)
 		{
-			VectorCopy(p1, newPoints[newNumPoints]);
-			newNumPoints++;
+			if (newNumPoints < maxpts)
+			{
+				VectorCopy(p1, newPoints[newNumPoints]);
+				newNumPoints++;
+			}
 		}
 
 		if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
@@ -247,7 +258,7 @@ bool Winding::Clip(BSPPLANE& split, bool keepon, float epsilon)
 		// generate a split point
 		vec3 mid;
 		size_t tmp = i + 1;
-		if (tmp >= m_Points.size())
+		if (tmp >= numPoints)
 		{
 			tmp = 0;
 		}
@@ -263,25 +274,19 @@ bool Winding::Clip(BSPPLANE& split, bool keepon, float epsilon)
 				mid[j] = p1[j] + dot * (p2[j] - p1[j]);
 		}
 
-		VectorCopy(mid, newPoints[newNumPoints]);
-		newNumPoints++;
+		if (newNumPoints < maxpts)
+		{
+			VectorCopy(mid, newPoints[newNumPoints]);
+			newNumPoints++;
+		}
 	}
 
-	if (newNumPoints > maxpts)
-	{
-		print_log(get_localized_string(LANG_1009));
-	}
-
+	newPoints.resize(newNumPoints);
 	m_Points = std::move(newPoints);
 
 	RemoveColinearPoints(epsilon);
 
-	if (m_Points.empty() == 0)
-	{
-		return false;
-	}
-
-	return true;
+	return !m_Points.empty();
 }
 
 void Winding::Round(float epsilon)
@@ -461,18 +466,15 @@ Winding* Winding::Merge(const Winding& other, const BSPPLANE& plane, float epsil
 
 	if (newf->m_Points.size() >= 3)
 	{
-		for (i = 0; i < m_Points.size(); i++)
+		for (i = 0; i < newf->m_Points.size(); i++)
 		{
-			for (j = i + 1; j < m_Points.size(); j++)
+			for (j = i + 1; j < newf->m_Points.size(); j++)
 			{
-				if (j != i)
+				if (newf->m_Points[i].equal(newf->m_Points[j], 0.01f))
 				{
-					if (m_Points[i].equal(m_Points[j], 0.01f))
-					{
-						// Has duplicate points (NO NORMAL FOR PLANE!)
-						delete newf;
-						return NULL;
-					}
+					// Has duplicate points (NO NORMAL FOR PLANE!)
+					delete newf;
+					return NULL;
 				}
 			}
 		}

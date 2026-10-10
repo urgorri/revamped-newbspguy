@@ -22,6 +22,7 @@
 #include "LeafNavMesh.h"
 #include "Settings.h"
 #include "gui/GuiCommandPalette.h"
+#include "mdl_studio.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -464,6 +465,7 @@ Renderer::~Renderer()
 		skyShader = NULL;
 	}
 	ClearTempDirectory();
+	ClearStudioModels();
 	glfwTerminate();
 }
 
@@ -1601,7 +1603,6 @@ void Renderer::renderLoop()
 								if (colors >= 256)
 								{
 									print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_0167));
-									delete tmpCQuantizer;
 									return;
 								}
 								palette[colors].r = pixels[(y * ortho_tga_w + x) * 3];

@@ -479,6 +479,9 @@ float getDistAlongAxis(const vec3& axis, const vec3& p)
 
 bool getPlaneFromVerts(const std::vector<vec3>& verts, vec3& outNormal, float& outDist)
 {
+	if (verts.size() < 3)
+		return false;
+
 	constexpr float tolerance = 0.00001f;
 
 	size_t numVerts = verts.size();
@@ -843,7 +846,7 @@ std::vector<vec3> getTriangularVerts(std::vector<vec3>& verts)
 		{
 			vec3 ab = (verts[i1] - verts[i0]).normalize();
 			vec3 ac = (verts[i] - verts[i0]).normalize();
-			if (std::fabs(dotProduct(ab, ac) - 1.0) < EPSILON)
+			if (std::fabs(std::fabs(dotProduct(ab, ac)) - 1.0) < EPSILON)
 			{
 				continue;
 			}
@@ -1043,7 +1046,9 @@ void WriteBMP_RGB(const std::string& fileName, unsigned char* pixels_rgb, int wi
 	const char* BM = "BM";
 	fwrite(&BM[0], 1, 1, outputFile);
 	fwrite(&BM[1], 1, 1, outputFile);
-	int paddedRowSize = (int)(4 * ceil((float)width / 4.0f)) * bytesPerPixel;
+	int unpaddedRowSize = width * bytesPerPixel;
+	int padding = (4 - (unpaddedRowSize % 4)) % 4;
+	int paddedRowSize = unpaddedRowSize + padding;
 	int fileSize = paddedRowSize * height + HEADER_SIZE + INFO_HEADER_SIZE;
 	fwrite(&fileSize, 4, 1, outputFile);
 	int reserved = 0x0000;
@@ -1064,7 +1069,7 @@ void WriteBMP_RGB(const std::string& fileName, unsigned char* pixels_rgb, int wi
 	int compression = NO_COMPRESION;
 	fwrite(&compression, 4, 1, outputFile);
 	// write image size(in bytes)
-	int imageSize = width * height * bytesPerPixel;
+	int imageSize = paddedRowSize * height;
 	fwrite(&imageSize, 4, 1, outputFile);
 	int resolutionX = 0; // 300 dpi
 	int resolutionY = 0; // 300 dpi
@@ -1074,12 +1079,20 @@ void WriteBMP_RGB(const std::string& fileName, unsigned char* pixels_rgb, int wi
 	fwrite(&colorsUsed, 4, 1, outputFile);
 	int importantColors = ALL_COLORS_REQUIRED;
 	fwrite(&importantColors, 4, 1, outputFile);
-	int i = 0;
-	int unpaddedRowSize = width * bytesPerPixel;
-	for (i = 0; i < height; i++)
+
+	std::vector<unsigned char> rowBuffer(paddedRowSize, 0);
+	for (int y = 0; y < height; y++)
 	{
-		int pixelOffset = ((height - i) - 1) * unpaddedRowSize;
-		fwrite(&pixels_rgb[pixelOffset], 1, paddedRowSize, outputFile);
+		int pixelOffset = ((height - 1 - y)) * unpaddedRowSize;
+		for (int x = 0; x < width; x++)
+		{
+			// BMP 24bpp expects BGR order
+			rowBuffer[x * 3 + 0] = pixels_rgb[pixelOffset + x * 3 + 2]; // B
+			rowBuffer[x * 3 + 1] = pixels_rgb[pixelOffset + x * 3 + 1]; // G
+			rowBuffer[x * 3 + 2] = pixels_rgb[pixelOffset + x * 3 + 0]; // R
+		}
+		// Padding bytes are already 0
+		fwrite(rowBuffer.data(), 1, paddedRowSize, outputFile);
 	}
 	fclose(outputFile);
 }
@@ -1097,7 +1110,8 @@ void WriteBMP_PAL(const std::string& fileName, unsigned char* pixels_indexes, in
 	const char* BM = "BM";
 	fwrite(&BM[0], 1, 1, outputFile);
 	fwrite(&BM[1], 1, 1, outputFile);
-	int paddedRowSize = (int)(4 * ceil((float)width / 4.0f));
+	int padding = (4 - (width % 4)) % 4;
+	int paddedRowSize = width + padding;
 	int dataOffset = HEADER_SIZE + INFO_HEADER_SIZE + 256 * sizeof(COLOR4);
 	int fileSize = paddedRowSize * height + dataOffset;
 	fwrite(&fileSize, 4, 1, outputFile);
@@ -1108,7 +1122,7 @@ void WriteBMP_PAL(const std::string& fileName, unsigned char* pixels_indexes, in
 	//*******INFO*HEADER******//
 	int infoHeaderSize = INFO_HEADER_SIZE;
 	fwrite(&infoHeaderSize, 4, 1, outputFile);
-	fwrite(&paddedRowSize, 4, 1, outputFile);
+	fwrite(&width, 4, 1, outputFile);
 	fwrite(&height, 4, 1, outputFile);
 	short planes = 1; // always 1
 	fwrite(&planes, 2, 1, outputFile);
@@ -1118,7 +1132,7 @@ void WriteBMP_PAL(const std::string& fileName, unsigned char* pixels_indexes, in
 	int compression = NO_COMPRESION;
 	fwrite(&compression, 4, 1, outputFile);
 	// write image size(in bytes)
-	int imageSize = 0;
+	int imageSize = paddedRowSize * height;
 	fwrite(&imageSize, 4, 1, outputFile);
 	int resolutionX = 0; // 300 dpi
 	int resolutionY = 0; // 300 dpi
@@ -1132,17 +1146,17 @@ void WriteBMP_PAL(const std::string& fileName, unsigned char* pixels_indexes, in
 	COLOR4 pal4[256];
 	for (int i = 0; i < 256; i++)
 	{
-		pal4[i] = pal[i];
+		pal4[i] = COLOR4(pal[i], 0);
 		std::swap(pal4[i].b, pal4[i].r);
 	}
 	fwrite(pal4, sizeof(COLOR4), 256, outputFile);
 
-	int i = 0;
-	int unpaddedRowSize = width;
-	for (i = 0; i < height; i++)
+	std::vector<unsigned char> rowBuffer(paddedRowSize, 0);
+	for (int y = 0; y < height; y++)
 	{
-		int pixelOffset = ((height - i) - 1) * unpaddedRowSize;
-		fwrite(&pixels_indexes[pixelOffset], 1, paddedRowSize, outputFile);
+		int pixelOffset = ((height - 1 - y)) * width;
+		memcpy(rowBuffer.data(), &pixels_indexes[pixelOffset], width);
+		fwrite(rowBuffer.data(), 1, paddedRowSize, outputFile);
 	}
 	fclose(outputFile);
 }
@@ -2193,7 +2207,7 @@ BSPPLANE getSeparatePlane(vec3 amin, vec3 amax, vec3 bmin, vec3 bmax, bool force
 	else if (bmax.x <= amin.x)
 	{
 		float gap = amin.x - bmax.x;
-		candidates.push_back({PLANE_X, {-1, 0, 0}, gap, bmax.x + gap * 0.5f});
+		candidates.push_back({PLANE_X, {-1, 0, 0}, gap, -(bmax.x + gap * 0.5f)});
 	}
 
 	// Y axis
@@ -2205,7 +2219,7 @@ BSPPLANE getSeparatePlane(vec3 amin, vec3 amax, vec3 bmin, vec3 bmax, bool force
 	else if (bmax.y <= amin.y)
 	{
 		float gap = amin.y - bmax.y;
-		candidates.push_back({PLANE_Y, {0, -1, 0}, gap, bmax.y + gap * 0.5f});
+		candidates.push_back({PLANE_Y, {0, -1, 0}, gap, -(bmax.y + gap * 0.5f)});
 	}
 
 	// Z axis
@@ -2217,7 +2231,7 @@ BSPPLANE getSeparatePlane(vec3 amin, vec3 amax, vec3 bmin, vec3 bmax, bool force
 	else if (bmax.z <= amin.z)
 	{
 		float gap = amin.z - bmax.z;
-		candidates.push_back({PLANE_Z, {0, 0, -1}, gap, bmax.z + gap * 0.5f});
+		candidates.push_back({PLANE_Z, {0, 0, -1}, gap, -(bmax.z + gap * 0.5f)});
 	}
 
 	if (candidates.empty())
@@ -2232,7 +2246,7 @@ BSPPLANE getSeparatePlane(vec3 amin, vec3 amax, vec3 bmin, vec3 bmax, bool force
 			}
 			else
 			{
-				return {{0, 0, -1}, midZ, PLANE_Z};
+				return {{0, 0, -1}, -midZ, PLANE_Z};
 			}
 		}
 		separationPlane.nType = -1; // No separating axis
@@ -2739,66 +2753,6 @@ int Process::executeAndWait(int sin, int sout, int serr)
 #endif
 }
 
-std::vector<double> solve_uv_matrix_svd(const std::vector<std::vector<double>>& matrix, const std::vector<double>& vector)
-{
-	// Construct the augmented matrix
-	std::vector<std::vector<double>> augmentedMatrix(3, std::vector<double>(5));
-	for (int i = 0; i < 3; ++i)
-	{
-		for (int j = 0; j < 4; ++j)
-		{
-			augmentedMatrix[i][j] = matrix[i][j];
-		}
-		augmentedMatrix[i][4] = vector[i];
-	}
-
-	// Perform Gaussian elimination
-	for (int i = 0; i < 3; ++i)
-	{
-		// Find the row with the largest pivot element
-		int maxRow = i;
-		double maxPivot = std::fabs(augmentedMatrix[i][i]);
-		for (int j = i + 1; j < 3; ++j)
-		{
-			if (std::fabs(augmentedMatrix[j][i]) > maxPivot)
-			{
-				maxRow = j;
-				maxPivot = std::fabs(augmentedMatrix[j][i]);
-			}
-		}
-
-		// Swap the current row with the row with the largest pivot element
-		if (maxRow != i)
-		{
-			std::swap(augmentedMatrix[i], augmentedMatrix[maxRow]);
-		}
-
-		// Perform row operations to eliminate the lower triangular elements
-		for (int j = i + 1; j < 3; ++j)
-		{
-			double factor = augmentedMatrix[j][i] / augmentedMatrix[i][i];
-			for (int k = i; k < 5; ++k)
-			{
-				augmentedMatrix[j][k] -= factor * augmentedMatrix[i][k];
-			}
-		}
-	}
-
-	// Perform back substitution to solve for the solution vector
-	std::vector<double> solution(4);
-	for (int i = 2; i >= 0; --i)
-	{
-		double sum = augmentedMatrix[i][4];
-		for (int j = i + 1; j < 3; ++j)
-		{
-			sum -= augmentedMatrix[i][j] * solution[j];
-		}
-		solution[i] = sum / augmentedMatrix[i][i];
-	}
-
-	return solution;
-}
-
 bool calculateTextureInfo(BSPTEXTUREINFO& texinfo, const std::vector<vec3>& vertices, const std::vector<vec2>& uvs)
 {
 	// Check if the number of vertices and UVs is valid
@@ -2807,37 +2761,42 @@ bool calculateTextureInfo(BSPTEXTUREINFO& texinfo, const std::vector<vec3>& vert
 		return false;
 	}
 
-	// Construct the vertices matrix with 3 rows, 4 columns
-	std::vector<std::vector<double>> verticesMat(3, std::vector<double>(4));
-	for (int i = 0; i < 3; ++i)
+	const vec3& p0 = vertices[0];
+	const vec3& p1 = vertices[1];
+	const vec3& p2 = vertices[2];
+
+	vec3 d1 = p1 - p0;
+	vec3 d2 = p2 - p0;
+
+	vec3 normal = crossProduct(d1, d2);
+	float nLenSq = normal.length() * normal.length();
+	if (nLenSq < 1e-8f)
 	{
-		verticesMat[i][0] = vertices[i].x;
-		verticesMat[i][1] = vertices[i].y;
-		verticesMat[i][2] = vertices[i].z;
-		verticesMat[i][3] = 1.0;
+		return false;
 	}
 
-	// Split the UV coordinates
-	std::vector<double> uvsU(3);
-	std::vector<double> uvsV(3);
-	for (int i = 0; i < 3; ++i)
-	{
-		uvsU[i] = uvs[i].x;
-		uvsV[i] = uvs[i].y;
-	}
+	double du1 = uvs[1].x - uvs[0].x;
+	double dv1 = uvs[1].y - uvs[0].y;
+	double du2 = uvs[2].x - uvs[0].x;
+	double dv2 = uvs[2].y - uvs[0].y;
 
-	std::vector<double> solU = solve_uv_matrix_svd(verticesMat, uvsU);
-	vec3 vS(solU[0], solU[1], solU[2]); // Extract vS vector
-	double shiftS = solU[3];			// Extract shiftS value
+	// Cross product of edge vectors with normal yields tangent directions on the plane:
+	// Any vector on plane V can be decomposed. Specifically:
+	// vS = (du1 * (d2 x normal) - du2 * (d1 x normal)) / (d1 x d2 . normal)
+	// Since d1 x d2 = normal, dot(normal, normal) = nLenSq.
+	vec3 cp1 = crossProduct(d2, normal);
+	vec3 cp2 = crossProduct(d1, normal);
 
-	std::vector<double> solV = solve_uv_matrix_svd(verticesMat, uvsV);
-	vec3 vT(solV[0], solV[1], solV[2]); // Extract vT vector
-	double shiftT = solV[3];			// Extract shiftT value
+	vec3 vS = (cp1 * (float)du1 - cp2 * (float)du2) * (1.0f / nLenSq);
+	vec3 vT = (cp1 * (float)dv1 - cp2 * (float)dv2) * (1.0f / nLenSq);
+
+	float shiftS = (float)uvs[0].x - dotProduct(vS, p0);
+	float shiftT = (float)uvs[0].y - dotProduct(vT, p0);
 
 	texinfo.vS = vS;
 	texinfo.vT = vT;
-	texinfo.shiftS = (float)shiftS;
-	texinfo.shiftT = (float)shiftT;
+	texinfo.shiftS = shiftS;
+	texinfo.shiftT = shiftT;
 	return true;
 }
 
@@ -2957,13 +2916,18 @@ std::vector<std::vector<COLOR3>> splitImage(const std::vector<COLOR3>& input, in
 
 std::vector<COLOR3> getSubImage(const std::vector<std::vector<COLOR3>>& images, int x, int y, int x_parts)
 {
-	if (x < 0 || x >= (int)images.size() || y < 0 || y >= (int)images[0].size())
+	if (images.empty() || x_parts <= 0 || x < 0 || x >= x_parts || y < 0)
 	{
 		print_log(PRINT_RED, "getSubImage: INVALID INPUT COORDS!\n");
 		return std::vector<COLOR3>();
 	}
 
-	size_t index = y * x_parts + x;
+	size_t index = (size_t)y * (size_t)x_parts + (size_t)x;
+	if (index >= images.size())
+	{
+		print_log(PRINT_RED, "getSubImage: INVALID INPUT COORDS!\n");
+		return std::vector<COLOR3>();
+	}
 	return images[index];
 }
 
@@ -3412,10 +3376,11 @@ void mapFixLightEnts(Bsp* map)
 	for (size_t i = 0; i < add_leafs.size(); i++)
 	{
 		map->ents.push_back(new Entity("light"));
-		vec3 lightPlace = getCenter(map->leaves[add_leafs[i]].nMaxs, map->leaves[add_leafs[i]].nMins);
-		lightPlace.z = std::max(map->leaves[i].nMins.z, map->leaves[i].nMaxs.z) - 16.0f;
-		map->ents[map->ents.size() - 1]->setOrAddKeyvalue("origin", getCenter(map->leaves[add_leafs[i]].nMaxs, map->leaves[add_leafs[i]].nMins).toKeyvalueString());
-		map->ents[map->ents.size() - 1]->setOrAddKeyvalue("_light", vec4(255.0f, 255.0f, 255.0f, std::min(300.0f, add_leafs_power[i] * 0.5f)).toKeyvalueString(true));
+		int leafIdx = add_leafs[i];
+		vec3 lightPlace = getCenter(map->leaves[leafIdx].nMaxs, map->leaves[leafIdx].nMins);
+		lightPlace.z = std::max(map->leaves[leafIdx].nMins.z, map->leaves[leafIdx].nMaxs.z) - 16.0f;
+		map->ents.back()->setOrAddKeyvalue("origin", lightPlace.toKeyvalueString());
+		map->ents.back()->setOrAddKeyvalue("_light", vec4(255.0f, 255.0f, 255.0f, std::min(300.0f, add_leafs_power[i] * 0.5f)).toKeyvalueString(true));
 	}
 
 	map->update_ent_lump();
@@ -3616,7 +3581,7 @@ void W_CleanupName(const char* in, char* out)
 WADTEX create_wadtex(const char* name, COLOR3* rgbdata, int width, int height)
 {
 	if (!name)
-		return NULL;
+		return WADTEX();
 	COLOR3 palette[256];
 	memset(&palette, 0, sizeof(COLOR3) * 256);
 	unsigned char* mip[MIPLEVELS] = {NULL};
@@ -3665,7 +3630,7 @@ WADTEX create_wadtex(const char* name, COLOR3* rgbdata, int width, int height)
 				{
 					print_log(get_localized_string(LANG_1044));
 					delete[] mip[0];
-					return NULL;
+					return WADTEX();
 				}
 				palette[colorCount] = *src;
 				paletteIdx = colorCount;
@@ -3709,25 +3674,26 @@ WADTEX create_wadtex(const char* name, COLOR3* rgbdata, int width, int height)
 		int mipWidth = width / div;
 		int mipHeight = height / div;
 		texDataSize += mipWidth * mipHeight;
-		mip[i] = new unsigned char[texDataSize];
+		mip[i] = new unsigned char[mipWidth * mipHeight];
 
-		src = rgbdata;
 		for (int y = 0; y < mipHeight; y++)
 		{
 			for (int x = 0; x < mipWidth; x++)
 			{
+				const COLOR3& sample = rgbdata[(y * div) * width + (x * div)];
 				int paletteIdx = -1;
 				for (int k = 0; k < colorCount; k++)
 				{
-					if (*src == palette[k])
+					if (sample == palette[k])
 					{
 						paletteIdx = k;
 						break;
 					}
 				}
+				if (paletteIdx == -1)
+					paletteIdx = 0;
 
 				mip[i][y * mipWidth + x] = (unsigned char)paletteIdx;
-				src += div;
 			}
 		}
 	}
@@ -3755,7 +3721,11 @@ WADTEX create_wadtex(const char* name, COLOR3* rgbdata, int width, int height)
 	memcpy(newTexData + newMipTex.nOffsets[1], mip[1], (width >> 1) * (height >> 1));
 	memcpy(newTexData + newMipTex.nOffsets[2], mip[2], (width >> 2) * (height >> 2));
 	memcpy(newTexData + newMipTex.nOffsets[3], mip[3], (width >> 3) * (height >> 3));
-	memcpy(palleteOffset, palette, sizeof(COLOR3) * 256);
+
+	for (int i = 0; i < MIPLEVELS; i++)
+	{
+		delete[] mip[i];
+	}
 
 	*(unsigned short*)palleteOffset = 256;
 	memcpy(palleteOffset + 2, palette, sizeof(COLOR3) * 256);
@@ -3877,7 +3847,7 @@ COLOR3 GetMipTexAplhaColor(BSPMIPTEX* tex, COLOR3* palette, int max_colors)
 		max_colors = *(unsigned short*)(((unsigned char*)tex) + tex->nOffsets[3] + lastMipSize);
 		palette = (COLOR3*)(((unsigned char*)tex) + tex->nOffsets[3] + lastMipSize + 2);
 	}
-	if (max_colors > 256 || max_colors < 0)
+	if (max_colors > 256 || max_colors <= 0)
 	{
 		max_colors = 256;
 	}
@@ -3893,7 +3863,7 @@ COLOR3 GetWadTexAplhaColor(const WADTEX& wadTex, COLOR3* palette, int max_colors
 		max_colors = *(unsigned short*)(src + wadTex.nOffsets[3] + lastMipSize - sizeof(BSPMIPTEX));
 		palette = (COLOR3*)(src + wadTex.nOffsets[3] + lastMipSize + sizeof(short) - sizeof(BSPMIPTEX));
 	}
-	if (max_colors > 256 || max_colors < 0)
+	if (max_colors > 256 || max_colors <= 0)
 	{
 		max_colors = 256;
 	}

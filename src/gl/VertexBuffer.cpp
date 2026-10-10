@@ -77,6 +77,7 @@ unsigned char* VertexBuffer::getData()
 			return nullptr;
 		}
 		data = new unsigned char[bufferSize];
+		ownData = true;
 		if (data)
 			glGetBufferSubData(GL_ARRAY_BUFFER, 0, bufferSize, data);
 	}
