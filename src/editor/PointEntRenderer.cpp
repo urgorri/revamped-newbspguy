@@ -20,7 +20,9 @@ PointEntRenderer::~PointEntRenderer()
 		delete entCubes[i]->cubeBuffer;
 		delete entCubes[i]->selectBuffer;
 		delete entCubes[i]->wireframeBuffer;
+		delete entCubes[i];
 	}
+	entCubes.clear();
 }
 
 EntCube* PointEntRenderer::getEntCube(Entity* ent)

@@ -42,7 +42,7 @@ struct COLOR3
 	}
 	bool operator<(const COLOR3& other) const
 	{
-		return r < other.r && g < other.g && b < other.b;
+		return std::tie(r, g, b) < std::tie(other.r, other.g, other.b);
 	}
 	bool operator>(const COLOR3& other) const
 	{

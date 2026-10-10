@@ -1601,7 +1601,6 @@ void Renderer::renderLoop()
 								if (colors >= 256)
 								{
 									print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_0167));
-									delete tmpCQuantizer;
 									return;
 								}
 								palette[colors].r = pixels[(y * ortho_tga_w + x) * 3];

@@ -159,7 +159,7 @@ void Texture::upload(int _type)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
-	if (texName[0] == '{' && format == GL_RGB)
+	if (!texName.empty() && texName[0] == '{' && format == GL_RGB)
 	{
 		format = GL_RGBA;
 		auto* rgbData = (COLOR3*)(data);
@@ -200,11 +200,19 @@ Texture* binded_tex[64];
 
 void Texture::bind(GLuint texnum)
 {
-	if (binded_tex[texnum] != this)
+	if (texnum < 64)
+	{
+		if (binded_tex[texnum] != this)
+		{
+			glActiveTexture(GL_TEXTURE0 + texnum);
+			glBindTexture(GL_TEXTURE_2D, id);
+			binded_tex[texnum] = this;
+		}
+	}
+	else
 	{
 		glActiveTexture(GL_TEXTURE0 + texnum);
 		glBindTexture(GL_TEXTURE_2D, id);
-		binded_tex[texnum] = this;
 	}
 }
 

@@ -154,9 +154,12 @@ int shiftVis(unsigned char* vis, int len, int offsetLeaf, int shift)
 			int startByte = (offsetLeaf + bitShifts) / 8;
 			int moveSize = len - (startByte + byteShifts);
 
-			memcpy(temp, (unsigned char*)vis + startByte, moveSize);
-			memset((unsigned char*)vis + startByte, 0, byteShifts);
-			memcpy((unsigned char*)vis + startByte + byteShifts, temp, moveSize);
+			if (moveSize > 0 && startByte >= 0 && (startByte + byteShifts + moveSize) <= len)
+			{
+				memcpy(temp, (unsigned char*)vis + startByte, moveSize);
+				memset((unsigned char*)vis + startByte, 0, byteShifts);
+				memcpy((unsigned char*)vis + startByte + byteShifts, temp, moveSize);
+			}
 
 			delete[] temp;
 		}
@@ -465,6 +468,7 @@ int CompressAll(BSPLEAF32* leafs, unsigned char* uncompressed, unsigned char* ou
 		{
 			print_log(PRINT_RED | PRINT_INTENSITY, get_localized_string(LANG_1003), (void*)vismap_p, (void*)(output + bufferSize));
 
+			delete[] compressed;
 			delete[] sharedRows;
 			return (int)(vismap_p - output);
 		}

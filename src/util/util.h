@@ -241,7 +241,6 @@ class Process
 	std::string getCommandlineString();
 	int executeAndWait(int sin, int sout, int serr);
 };
-std::vector<double> solve_uv_matrix_svd(const std::vector<std::vector<double>>& matrix, const std::vector<double>& vector);
 bool calculateTextureInfo(BSPTEXTUREINFO& texinfo, const std::vector<vec3>& vertices, const std::vector<vec2>& uvs);
 void getTrueTexSize(int& width, int& height, int maxsize = 512);
 

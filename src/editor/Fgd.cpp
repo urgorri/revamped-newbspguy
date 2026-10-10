@@ -490,6 +490,8 @@ void Fgd::parseClassHeader(FgdClass& fgdClass)
 void Fgd::parseKeyvalue(FgdClass& outClass)
 {
 	std::vector<std::string> keyParts = splitStringIgnoringQuotes(line, ":");
+	if (keyParts.empty())
+		return;
 
 	KeyvalueDef def;
 
@@ -509,7 +511,7 @@ void Fgd::parseKeyvalue(FgdClass& outClass)
 		def.shortDescription = def.name;
 
 		// capitalize (infodecal)
-		if ((def.shortDescription[0] > 96) && (def.shortDescription[0] < 123))
+		if (!def.shortDescription.empty() && (def.shortDescription[0] > 96) && (def.shortDescription[0] < 123))
 			def.shortDescription[0] = def.shortDescription[0] - 32;
 	}
 
@@ -551,6 +553,8 @@ void Fgd::parseKeyvalue(FgdClass& outClass)
 void Fgd::parseChoicesOrFlags(KeyvalueDef& outKey)
 {
 	std::vector<std::string> keyParts = splitStringIgnoringQuotes(line, ":");
+	if (keyParts.empty())
+		return;
 
 	KeyvalueChoice def;
 
