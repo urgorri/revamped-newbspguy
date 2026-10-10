@@ -468,7 +468,7 @@ void StudioModel::SetupModel(int bodypart)
 		return;
 	}
 
-	if (pbodypart->nummodels <= 0)
+	if (pbodypart->nummodels <= 0 || pbodypart->base <= 0)
 	{
 		m_pmodel = (mstudiomodel_t*)((unsigned char*)m_pstudiohdr + pbodypart->modelindex);
 	}
@@ -1354,13 +1354,16 @@ float StudioModel::SetBlending(int iBlender, float flValue)
 
 int StudioModel::SetBodygroup(int iGroup, int iValue)
 {
-	if (iGroup > m_pstudiohdr->numbodyparts || (iGroup == m_iGroup && iValue == m_iGroupValue))
+	if (!m_pstudiohdr || iGroup < 0 || iGroup >= m_pstudiohdr->numbodyparts || (iGroup == m_iGroup && iValue == m_iGroupValue))
 		return -1;
 
 	m_iGroup = iGroup;
 	m_iGroupValue = iValue;
 
 	mstudiobodyparts_t* pbodypart = (mstudiobodyparts_t*)((unsigned char*)m_pstudiohdr + m_pstudiohdr->bodypartindex) + iGroup;
+
+	if (pbodypart->base <= 0 || pbodypart->nummodels <= 0)
+		return -1;
 
 	int iCurrent = (m_bodynum / pbodypart->base) % pbodypart->nummodels;
 
@@ -1386,8 +1389,17 @@ StudioModel* AddNewModelToRender(const std::string& path, unsigned int sum)
 	}
 	else
 	{
-		StudioModel* newModel = new StudioModel(path); // memory leak (cache)
+		StudioModel* newModel = new StudioModel(path);
 		mdl_models[crc32] = newModel;
 		return newModel;
 	}
+}
+
+void ClearStudioModels()
+{
+	for (auto& s : mdl_models)
+	{
+		delete s.second;
+	}
+	mdl_models.clear();
 }

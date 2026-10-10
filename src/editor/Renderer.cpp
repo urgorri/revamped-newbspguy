@@ -22,6 +22,7 @@
 #include "LeafNavMesh.h"
 #include "Settings.h"
 #include "gui/GuiCommandPalette.h"
+#include "mdl_studio.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -464,6 +465,7 @@ Renderer::~Renderer()
 		skyShader = NULL;
 	}
 	ClearTempDirectory();
+	ClearStudioModels();
 	glfwTerminate();
 }
 

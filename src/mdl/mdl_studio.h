@@ -553,3 +553,4 @@ class StudioModel
 
 extern std::map<unsigned int, StudioModel*> mdl_models;
 StudioModel* AddNewModelToRender(const std::string& path, unsigned int sum = 0);
+void ClearStudioModels();
