@@ -1978,7 +1978,7 @@ float floatRound(float f)
 void scaleImage(const COLOR4* inputImage, std::vector<COLOR4>& outputImage,
 				int inputWidth, int inputHeight, int outputWidth, int outputHeight)
 {
-	outputImage.resize(outputWidth * outputHeight);
+	outputImage.resize((size_t)outputWidth * outputHeight);
 
 	float xScale = static_cast<float>(inputWidth) / outputWidth;
 	float yScale = static_cast<float>(inputHeight) / outputHeight;
@@ -2033,7 +2033,7 @@ void scaleImage(const COLOR3* inputImage, std::vector<COLOR3>& outputImage,
 		return;
 	}
 
-	outputImage.resize(outputWidth * outputHeight);
+	outputImage.resize((size_t)outputWidth * outputHeight);
 
 	float xScale = static_cast<float>(inputWidth) / outputWidth;
 	float yScale = static_cast<float>(inputHeight) / outputHeight;
@@ -2881,7 +2881,7 @@ std::vector<std::vector<COLOR3>> splitImage(const COLOR3* input, int input_width
 	out_part_width = input_width / x_parts;
 	out_part_height = input_height / y_parts;
 
-	std::vector<std::vector<COLOR3>> parts(x_parts * y_parts);
+	std::vector<std::vector<COLOR3>> parts((size_t)x_parts * y_parts);
 
 	if (input_width % x_parts || input_height % y_parts)
 	{
@@ -3665,7 +3665,7 @@ WADTEX create_wadtex(const char* name, COLOR3* rgbdata, int width, int height)
 		std::swap(palette[0], palette[255]);
 	}
 
-	int texDataSize = width * height + sizeof(short) /* pal num*/ + sizeof(COLOR3) * 256;
+	int texDataSize = (int)((size_t)width * height + sizeof(short) /* pal num*/ + sizeof(COLOR3) * 256);
 
 	// generate mipmaps
 	for (int i = 1; i < MIPLEVELS; i++)
@@ -3717,10 +3717,10 @@ WADTEX create_wadtex(const char* name, COLOR3* rgbdata, int width, int height)
 	newMipTex.nOffsets[3] = newMipTex.nOffsets[2] + (width >> 2) * (height >> 2);
 
 	unsigned char* palleteOffset = newTexData + newMipTex.nOffsets[3] + (width >> 3) * (height >> 3);
-	memcpy(newTexData + newMipTex.nOffsets[0], mip[0], width * height);
-	memcpy(newTexData + newMipTex.nOffsets[1], mip[1], (width >> 1) * (height >> 1));
-	memcpy(newTexData + newMipTex.nOffsets[2], mip[2], (width >> 2) * (height >> 2));
-	memcpy(newTexData + newMipTex.nOffsets[3], mip[3], (width >> 3) * (height >> 3));
+	memcpy(newTexData + newMipTex.nOffsets[0], mip[0], (size_t)width * height);
+	memcpy(newTexData + newMipTex.nOffsets[1], mip[1], (size_t)(width >> 1) * (height >> 1));
+	memcpy(newTexData + newMipTex.nOffsets[2], mip[2], (size_t)(width >> 2) * (height >> 2));
+	memcpy(newTexData + newMipTex.nOffsets[3], mip[3], (size_t)(width >> 3) * (height >> 3));
 
 	for (int i = 0; i < MIPLEVELS; i++)
 	{

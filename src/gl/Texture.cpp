@@ -28,7 +28,7 @@ Texture::Texture(GLsizei _width, GLsizei _height, unsigned char* data, const std
 		farFilter = GL_NEAREST;
 	}
 	this->data = data;
-	dataLen = static_cast<unsigned int>(width * height * (rgba ? sizeof(COLOR4) : sizeof(COLOR3)));
+	dataLen = static_cast<unsigned int>((size_t)width * height * (rgba ? sizeof(COLOR4) : sizeof(COLOR3)));
 	id = 0xFFFFFFFF;
 	format = rgba ? GL_RGBA : GL_RGB;
 	this->texName = name;
@@ -177,7 +177,7 @@ void Texture::upload(int _type)
 			delete[] data;
 		data = (unsigned char*)(rgbaData);
 		tex_owndata = true;
-		dataLen = (unsigned int)(width * height * sizeof(COLOR4));
+		dataLen = (unsigned int)((size_t)width * height * sizeof(COLOR4));
 	}
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

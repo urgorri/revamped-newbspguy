@@ -154,8 +154,8 @@ void Gui::init()
 		unsigned char* img_new = NULL;
 		if (img_malloc)
 		{
-			img_new = new unsigned char[width * height * 4];
-			memcpy(img_new, img_malloc, width * height * 4);
+			img_new = new unsigned char[(size_t)width * height * 4];
+			memcpy(img_new, img_malloc, (size_t)width * height * 4);
 			free(img_malloc);
 		}
 		else

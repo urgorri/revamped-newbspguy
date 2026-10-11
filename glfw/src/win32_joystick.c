@@ -461,9 +461,9 @@ static BOOL CALLBACK deviceCallback(const DIDEVICEINSTANCE* di, void* user)
     else
     {
         sprintf(guid, "05000000%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x00",
-                name[0], name[1], name[2], name[3],
-                name[4], name[5], name[6], name[7],
-                name[8], name[9], name[10]);
+                (uint8_t) name[0], (uint8_t) name[1], (uint8_t) name[2], (uint8_t) name[3],
+                (uint8_t) name[4], (uint8_t) name[5], (uint8_t) name[6], (uint8_t) name[7],
+                (uint8_t) name[8], (uint8_t) name[9], (uint8_t) name[10]);
     }
 
     js = _glfwAllocJoystick(name, guid,

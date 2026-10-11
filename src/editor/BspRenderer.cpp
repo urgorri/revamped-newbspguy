@@ -656,9 +656,9 @@ void BspRenderer::loadLightmaps()
 	std::vector<Texture*> atlasTextures{};
 	atlases.emplace_back(LightmapNode(0, 0, MAX_LIGHTMAP_ATLAS_SIZE, MAX_LIGHTMAP_ATLAS_SIZE));
 	atlasTextures.push_back(new Texture(MAX_LIGHTMAP_ATLAS_SIZE, MAX_LIGHTMAP_ATLAS_SIZE,
-										new unsigned char[MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3)], "LIGHTMAP"));
+										new unsigned char[(size_t)MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3)], "LIGHTMAP"));
 
-	memset(atlasTextures[atlasTextures.size() - 1]->getData(), 255, MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3));
+	memset(atlasTextures[atlasTextures.size() - 1]->getData(), 255, (size_t)MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3));
 
 	numRenderLightmapInfos = map->faceCount;
 	if (lightmaps)
@@ -746,10 +746,10 @@ void BspRenderer::loadLightmaps()
 				if (!atlases[atlasId].insert(info.w, info.h, info.x[s], info.y[s]))
 				{
 					atlases.emplace_back(LightmapNode(0, 0, MAX_LIGHTMAP_ATLAS_SIZE, MAX_LIGHTMAP_ATLAS_SIZE));
-					atlasTextures.push_back(new Texture(MAX_LIGHTMAP_ATLAS_SIZE, MAX_LIGHTMAP_ATLAS_SIZE, new unsigned char[MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3)], "LIGHTMAP"));
+					atlasTextures.push_back(new Texture(MAX_LIGHTMAP_ATLAS_SIZE, MAX_LIGHTMAP_ATLAS_SIZE, new unsigned char[(size_t)MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3)], "LIGHTMAP"));
 
 					atlasId++;
-					memset(atlasTextures[atlasId]->getData(), 255, MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3));
+					memset(atlasTextures[atlasId]->getData(), 255, (size_t)MAX_LIGHTMAP_ATLAS_SIZE * MAX_LIGHTMAP_ATLAS_SIZE * sizeof(COLOR3));
 
 					if (!atlases[atlasId].insert(info.w, info.h, info.x[s], info.y[s]))
 					{
@@ -762,7 +762,7 @@ void BspRenderer::loadLightmaps()
 				info.atlasId[s] = (int)atlasId;
 
 				// copy lightmap data into atlas
-				int lightmapSz = info.w * info.h * sizeof(COLOR3);
+				int lightmapSz = (int)((size_t)info.w * info.h * sizeof(COLOR3));
 				int offset = face.nLightmapOffset + s * lightmapSz;
 
 				COLOR3* lightSrc = (COLOR3*)(map->lightdata + offset);

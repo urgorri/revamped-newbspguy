@@ -319,8 +319,8 @@ Renderer::Renderer()
 		unsigned char* img_new = NULL;
 		if (img_malloc)
 		{
-			img_new = new unsigned char[width * height * bpp];
-			memcpy(img_new, img_malloc, width * height * bpp);
+			img_new = new unsigned char[(size_t)width * height * bpp];
+			memcpy(img_new, img_malloc, (size_t)width * height * bpp);
 			free(img_malloc);
 		}
 		return new Texture(width, height, img_new, name, rgba, true);
@@ -1505,16 +1505,17 @@ void Renderer::renderLoop()
 					captureH = windowHeight;
 				}
 
-				std::vector<uint8_t> pixels(3 * captureW * captureH);
+				std::vector<uint8_t> pixels((size_t)3 * captureW * captureH);
 				glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 				glReadPixels(0, 0, captureW, captureH, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+				std::ptrdiff_t rowStride = (std::ptrdiff_t)3 * captureW;
 				for (int line = 0; line != captureH / 2; ++line)
 				{
-					std::swap_ranges(pixels.begin() + 3 * captureW * line,
-									 pixels.begin() + 3 * captureW * (line + 1),
-									 pixels.begin() + 3 * captureW * (captureH - line - 1));
+					std::swap_ranges(pixels.begin() + rowStride * line,
+									 pixels.begin() + rowStride * (line + 1),
+									 pixels.begin() + rowStride * (captureH - line - 1));
 				}
 
 				if (request_viewport_screenshot)
@@ -1576,12 +1577,12 @@ void Renderer::renderLoop()
 				else
 				{
 					Quantizer* tmpCQuantizer = new Quantizer(256, 8);
-					tmpCQuantizer->ApplyColorTable((COLOR3*)pixels.data(), ortho_tga_w * ortho_tga_h);
+					tmpCQuantizer->ApplyColorTable((COLOR3*)pixels.data(), (size_t)ortho_tga_w * ortho_tga_h);
 					delete tmpCQuantizer;
 
 					int colors = 0;
 					COLOR3 palette[256];
-					std::vector<unsigned char> indexedPixels(ortho_tga_w * ortho_tga_h);
+					std::vector<unsigned char> indexedPixels((size_t)ortho_tga_w * ortho_tga_h);
 
 					for (int y = 0; y < ortho_tga_h; y++)
 					{

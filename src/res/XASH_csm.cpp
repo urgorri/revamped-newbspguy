@@ -317,7 +317,7 @@ bool CSMFile::read_v3(std::ifstream& file)
 	{
 		file.seekg(header.sides_ofs);
 		sides.resize(header.sides_count);
-		file.read((char*)sides.data(), header.side_size * header.sides_count);
+		file.read((char*)sides.data(), (size_t)header.side_size * header.sides_count);
 	}
 
 	// points (v3)
@@ -325,7 +325,7 @@ bool CSMFile::read_v3(std::ifstream& file)
 	{
 		file.seekg(header.points_ofs);
 		points.resize(header.points_count);
-		file.read((char*)points.data(), header.point_size * header.points_count);
+		file.read((char*)points.data(), (size_t)header.point_size * header.points_count);
 	}
 
 	return true;
@@ -593,19 +593,19 @@ bool CSMFile::write(const std::string& filePath)
 
 	// write vertices
 	if (!vertices.empty())
-		file.write(reinterpret_cast<const char*>(vertices.data()), header.vertex_size * header.vertex_count);
+		file.write(reinterpret_cast<const char*>(vertices.data()), (size_t)header.vertex_size * header.vertex_count);
 
 	// write faces
 	if (!faces.empty())
-		file.write(reinterpret_cast<const char*>(faces.data()), header.face_size * header.faces_count);
+		file.write(reinterpret_cast<const char*>(faces.data()), (size_t)header.face_size * header.faces_count);
 
 	// write sides
 	if (!sides.empty())
-		file.write(reinterpret_cast<const char*>(sides.data()), header.side_size * header.sides_count);
+		file.write(reinterpret_cast<const char*>(sides.data()), (size_t)header.side_size * header.sides_count);
 
 	// write points
 	if (!points.empty())
-		file.write(reinterpret_cast<const char*>(points.data()), header.point_size * header.points_count);
+		file.write(reinterpret_cast<const char*>(points.data()), (size_t)header.point_size * header.points_count);
 
 	file.close();
 
