@@ -87,7 +87,7 @@ void Gui::drawDebugWidget()
 				}
 
 				ImGui::Text("Pick count: %d. \nVert pick count: %d", pickCount, vertPickCount);
-				ImGui::Text("Model verts: %d. \nModel faces: %d", app->modelVerts.size(), app->modelFaceVerts.size());
+				ImGui::Text("Model verts: %zu. \nModel faces: %zu", app->modelVerts.size(), app->modelFaceVerts.size());
 				ImGui::Text("KEYS: %s", keysStr.c_str());
 				ImGui::Text(fmt::format("Time: {}", (float)app->curTime).c_str());
 				ImGui::Text(fmt::format("canControl:{}\noldControl:{}\nNo WantTextInput:{}", app->canControl, app->oldControl, !imgui_io->WantTextInput).c_str());
@@ -3807,7 +3807,7 @@ void ImportOneBigLightmapFile(Bsp* map)
 		{
 			int faceIdx = e.faceIdx;
 			int sizeX = e.w, sizeY = e.h;
-			int lightmapSz = sizeX * sizeY * sizeof(COLOR3);
+			int lightmapSz = (int)((size_t)sizeX * sizeY * sizeof(COLOR3));
 			int offset = map->faces[faceIdx].nLightmapOffset + lightId * lightmapSz;
 
 			int sizeCheck[2];
@@ -3826,7 +3826,7 @@ void ImportOneBigLightmapFile(Bsp* map)
 			}
 
 			std::vector<COLOR3> tmp;
-			tmp.resize(sizeX * sizeY);
+			tmp.resize((size_t)sizeX * sizeY);
 			for (int yy = 0; yy < sizeY; ++yy)
 			{
 				for (int xx = 0; xx < sizeX; ++xx)
@@ -3892,7 +3892,7 @@ void Gui::ExportOneBigLightmap(Bsp* map)
 		for (const auto& e : entries)
 		{
 			int sizeX = e.w, sizeY = e.h;
-			int lightmapSz = sizeX * sizeY * sizeof(COLOR3);
+			int lightmapSz = (int)((size_t)sizeX * sizeY * sizeof(COLOR3));
 			int offset = map->faces[e.faceIdx].nLightmapOffset + lightId * lightmapSz;
 
 			COLOR3* src = nullptr;
@@ -3905,7 +3905,7 @@ void Gui::ExportOneBigLightmap(Bsp* map)
 			}
 			else
 			{
-				std::vector<COLOR3> tmp(sizeX * sizeY, COLOR3(0, 0, 255));
+				std::vector<COLOR3> tmp((size_t)sizeX * sizeY, COLOR3(0, 0, 255));
 				DrawImageAtOneBigLightMap(tmp.data(), sizeX, sizeY, e.x, e.y);
 			}
 		}
@@ -3941,7 +3941,7 @@ void ExportLightmap(const BSPFACE32& face, int faceIdx, Bsp* map)
 	{
 		if (face.nStyles[i] == 255)
 			continue;
-		int lightmapSz = size[0] * size[1] * sizeof(COLOR3);
+		int lightmapSz = (int)((size_t)size[0] * size[1] * sizeof(COLOR3));
 		int offset = face.nLightmapOffset + i * lightmapSz;
 		filename = fmt::format(fmt::runtime(get_localized_string(LANG_0413)), exportPath.c_str(), get_localized_string(LANG_0408), faceIdx, i);
 		print_log(get_localized_string(LANG_0414), filename);
@@ -3959,7 +3959,7 @@ void ImportLightmap(const BSPFACE32& face, int faceIdx, Bsp* map)
 	{
 		if (face.nStyles[i] == 255)
 			continue;
-		int lightmapSz = size[0] * size[1] * sizeof(COLOR3);
+		int lightmapSz = (int)((size_t)size[0] * size[1] * sizeof(COLOR3));
 		int offset = face.nLightmapOffset + i * lightmapSz;
 		filename = fmt::format(fmt::runtime(get_localized_string(LANG_1063)), importPath.c_str(), get_localized_string(LANG_1062), faceIdx, i);
 		unsigned int w = size[0], h = size[1];
@@ -4049,7 +4049,7 @@ void Gui::drawLightMapTool()
 				{
 					if (face->nStyles[i] == 255)
 						continue;
-					int lightmapSz = size[0] * size[1] * sizeof(COLOR3);
+					int lightmapSz = (int)((size_t)size[0] * size[1] * sizeof(COLOR3));
 					currentlightMap[i] = new Texture(size[0], size[1], new unsigned char[lightmapSz], "LIGHTMAP");
 					int offset = face->nLightmapOffset + i * lightmapSz;
 					light_offsets[i] = offset;
@@ -4192,7 +4192,7 @@ void Gui::drawLightMapTool()
 							// Only fill the layer currently being edited if we could identify it,
 							// but here we just fill all active layers of the face to match the user's probable intent
 							// for a "Fill" operation on selected faces.
-							int offset = fillFace.nLightmapOffset + i * layerSize * sizeof(COLOR3);
+							int offset = (int)(fillFace.nLightmapOffset + (size_t)i * layerSize * sizeof(COLOR3));
 							if (map->lightdata && offset + layerSize * (int)sizeof(COLOR3) <= map->lightDataLength)
 							{
 								COLOR3* dst = (COLOR3*)(map->lightdata + offset);
@@ -4226,7 +4226,7 @@ void Gui::drawLightMapTool()
 					{
 						if (face->nStyles[i] == 255 || !currentlightMap[i])
 							continue;
-						int lightmapSz = size[0] * size[1] * sizeof(COLOR3);
+						int lightmapSz = (int)((size_t)size[0] * size[1] * sizeof(COLOR3));
 						int offset = face->nLightmapOffset + i * lightmapSz;
 						memcpy(map->lightdata + offset, currentlightMap[i]->getData(), lightmapSz);
 					}

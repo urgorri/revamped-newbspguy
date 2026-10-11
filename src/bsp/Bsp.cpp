@@ -2173,7 +2173,7 @@ unsigned int Bsp::remove_unused_structs(int lumpIdx, std::vector<bool>& usedStru
 		remappedIndexes[i] = k++;
 	}
 
-	replace_lump(lumpIdx, newStructs, newStructCount * structSize);
+	replace_lump(lumpIdx, newStructs, (size_t)newStructCount * structSize);
 	delete[] newStructs;
 	return removeCount;
 }
@@ -8621,11 +8621,11 @@ int Bsp::add_texture(const char* oldname, unsigned char* data, int width, int he
 
 	if (is_texture_has_pal && !force_custompal)
 	{
-		texDataSize += width * height + sizeof(short) /* palette count */ + sizeof(COLOR3) * 256;
+		texDataSize += (int)((size_t)width * height + sizeof(short) /* palette count */ + sizeof(COLOR3) * 256);
 	}
 	else
 	{
-		texDataSize += width * height;
+		texDataSize += (int)((size_t)width * height);
 	}
 
 	unsigned char* mip[MIPLEVELS] = {NULL};
@@ -8764,10 +8764,10 @@ int Bsp::add_texture(const char* oldname, unsigned char* data, int width, int he
 	{
 		int newTexOffset = ((int*)textures)[oldtexid + 1];
 
-		memcpy(textures + newTexOffset + oldtex->nOffsets[0], mip[0], width * height);
-		memcpy(textures + newTexOffset + oldtex->nOffsets[1], mip[1], (width >> 1) * (height >> 1));
-		memcpy(textures + newTexOffset + oldtex->nOffsets[2], mip[2], (width >> 2) * (height >> 2));
-		memcpy(textures + newTexOffset + oldtex->nOffsets[3], mip[3], (width >> 3) * (height >> 3));
+		memcpy(textures + newTexOffset + oldtex->nOffsets[0], mip[0], (size_t)width * height);
+		memcpy(textures + newTexOffset + oldtex->nOffsets[1], mip[1], (size_t)(width >> 1) * (height >> 1));
+		memcpy(textures + newTexOffset + oldtex->nOffsets[2], mip[2], (size_t)(width >> 2) * (height >> 2));
+		memcpy(textures + newTexOffset + oldtex->nOffsets[3], mip[3], (size_t)(width >> 3) * (height >> 3));
 
 		unsigned char* palleteOffset = textures + (newTexOffset + oldtex->nOffsets[3] + (width >> 3) * (height >> 3));
 
@@ -8841,10 +8841,10 @@ int Bsp::add_texture(const char* oldname, unsigned char* data, int width, int he
 		newMipTex->nOffsets[3] = newMipTex->nOffsets[2] + (width >> 2) * (height >> 2);
 		unsigned char* palleteOffset = newTexData + (newTexOffset + newMipTex->nOffsets[3] + (width >> 3) * (height >> 3));
 
-		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[0], mip[0], width * height);
-		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[1], mip[1], (width >> 1) * (height >> 1));
-		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[2], mip[2], (width >> 2) * (height >> 2));
-		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[3], mip[3], (width >> 3) * (height >> 3));
+		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[0], mip[0], (size_t)width * height);
+		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[1], mip[1], (size_t)(width >> 1) * (height >> 1));
+		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[2], mip[2], (size_t)(width >> 2) * (height >> 2));
+		memcpy(newTexData + newTexOffset + newMipTex->nOffsets[3], mip[3], (size_t)(width >> 3) * (height >> 3));
 
 		if (is_texture_has_pal && !force_custompal)
 		{
@@ -9011,8 +9011,8 @@ bool Bsp::import_textures_to_wad(const std::string& wadpath, const std::string& 
 				auto error = lodepng_decode32_file(&img_malloc, &w2, &h2, file.c_str());
 				if (error == 0 && img_malloc)
 				{
-					COLOR4* image_bytes = new COLOR4[w2 * h2];
-					memcpy(image_bytes, img_malloc, w2 * h2 * 4);
+					COLOR4* image_bytes = new COLOR4[(size_t)w2 * h2];
+					memcpy(image_bytes, img_malloc, (size_t)w2 * h2 * 4);
 					free(img_malloc);
 
 					COLOR3* image_bytes_rgb = (COLOR3*)&image_bytes[0];
@@ -9053,7 +9053,7 @@ bool Bsp::import_textures_to_wad(const std::string& wadpath, const std::string& 
 						std::lock_guard<std::mutex> lock(Sync::BspOps);
 						textureList.push_back(tmpWadTex);
 					}
-					free(image_bytes);
+					delete[] image_bytes;
 				} });
 		print_log(get_localized_string(LANG_0355));
 
@@ -14748,8 +14748,8 @@ void Bsp::ExportExtFile(const std::string& path, std::string& out_map_path)
 				}
 				if (!foundTex)
 				{
-					COLOR3* tmpColor = new COLOR3[tex.nWidth * tex.nHeight];
-					memset(tmpColor, 255, tex.nWidth * tex.nHeight * sizeof(COLOR3));
+					COLOR3* tmpColor = new COLOR3[(size_t)tex.nWidth * tex.nHeight];
+					memset(tmpColor, 255, (size_t)tex.nWidth * tex.nHeight * sizeof(COLOR3));
 					texture = create_wadtex(tex.szName, tmpColor, tex.nWidth, tex.nHeight);
 					delete[] tmpColor;
 					missingTexures++;
@@ -15346,7 +15346,7 @@ int Bsp::import_mdl_to_bspmodel(std::vector<StudioMesh>& meshes, mat4x4 angles, 
 				}
 				else
 				{
-					memcpy(tmpData, tmpDataTex, mesh_texture->width * mesh_texture->height * sizeof(COLOR3));
+					memcpy(tmpData, tmpDataTex, (size_t)mesh_texture->width * mesh_texture->height * sizeof(COLOR3));
 				}
 				added_textures.insert(mesh_texture);
 
@@ -15356,9 +15356,9 @@ int Bsp::import_mdl_to_bspmodel(std::vector<StudioMesh>& meshes, mat4x4 angles, 
 					scaleImage(tmpData, newData, mesh_texture->width, mesh_texture->height,
 							   newWidth, newHeight);
 					delete[] tmpData;
-					tmpData = new COLOR3[newWidth * newHeight];
+					tmpData = new COLOR3[(size_t)newWidth * newHeight];
 
-					if (newData.size() == newWidth * newHeight)
+					if (newData.size() == (size_t)newWidth * newHeight)
 						std::copy(newData.begin(), newData.end(), tmpData);
 
 					if (GetImageColors(tmpData, newWidth * newHeight) > 256)
@@ -16095,7 +16095,7 @@ int Bsp::GetFaceSingleLightmapSizeBytes(int facenum)
 	if (face.nStyles[0] == 255 && face.nStyles[1] == 255 &&
 		face.nStyles[2] == 255 && face.nStyles[3] == 255)
 		return 0;
-	return size[0] * size[1] * sizeof(COLOR3);
+	return (int)((size_t)size[0] * size[1] * sizeof(COLOR3));
 }
 
 bool Bsp::GetFaceLightmapSize(int facenum, int size[2])
@@ -16130,7 +16130,7 @@ int Bsp::GetFaceLightmapSizeBytes(int facenum)
 	{
 		lightmapCount += face.nStyles[k] != 255;
 	}
-	return size[0] * size[1] * lightmapCount * sizeof(COLOR3);
+	return (int)((size_t)size[0] * size[1] * lightmapCount * sizeof(COLOR3));
 }
 
 BSPPLANE Bsp::getPlaneFromFace(const BSPFACE32* const face)

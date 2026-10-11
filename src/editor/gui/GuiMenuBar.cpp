@@ -4055,8 +4055,8 @@ void Gui::drawMenu_Tools()
 								}
 								if (!textureFoundInWad)
 								{
-									COLOR3* imageData = new COLOR3[tex.nWidth * tex.nHeight];
-									memset(imageData, 255, tex.nWidth * tex.nHeight * sizeof(COLOR3));
+									COLOR3* imageData = new COLOR3[(size_t)tex.nWidth * tex.nHeight];
+									memset(imageData, 255, (size_t)tex.nWidth * tex.nHeight * sizeof(COLOR3));
 									map->add_texture(tex.szName, (unsigned char*)imageData, tex.nWidth, tex.nHeight);
 									delete[] imageData;
 								}
